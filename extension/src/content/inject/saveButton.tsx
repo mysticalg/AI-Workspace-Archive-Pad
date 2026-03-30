@@ -4,6 +4,8 @@ interface SaveButtonProps {
   isBusy: boolean;
   pageLabel: string;
   status: string;
+  detail: string;
+  saveDisabled: boolean;
   onSavePage: () => void;
   onOpenSidePanel: () => void;
 }
@@ -49,6 +51,8 @@ export function SaveButton({
   isBusy,
   pageLabel,
   status,
+  detail,
+  saveDisabled,
   onSavePage,
   onOpenSidePanel,
 }: SaveButtonProps) {
@@ -82,7 +86,15 @@ export function SaveButton({
         </div>
       </div>
 
-      <button disabled={isBusy} onClick={onSavePage} style={primaryButtonStyle}>
+      <button
+        disabled={isBusy || saveDisabled}
+        onClick={onSavePage}
+        style={{
+          ...primaryButtonStyle,
+          opacity: isBusy || saveDisabled ? 0.58 : 1,
+          cursor: isBusy || saveDisabled ? "not-allowed" : "pointer",
+        }}
+      >
         {isBusy ? "Saving..." : "Save Current Chat"}
       </button>
 
@@ -104,7 +116,9 @@ export function SaveButton({
           User-triggered capture only
         </div>
       </div>
+      <div style={{ marginTop: 10, fontSize: 12, lineHeight: 1.45, opacity: 0.82 }}>
+        {detail}
+      </div>
     </div>
   );
 }
-

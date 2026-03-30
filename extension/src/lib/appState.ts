@@ -23,6 +23,18 @@ type CaptureResponse = {
   deduped: boolean;
 };
 
+export interface PageStatusResponse {
+  supported?: boolean;
+  supportedUrl?: boolean;
+  captureReady?: boolean;
+  enabled?: boolean;
+  permissionGranted?: boolean;
+  platform?: string;
+  title?: string;
+  hasSelection?: boolean;
+  reason?: string;
+}
+
 type PermissionResponse = {
   granted: boolean;
   platform: string;
@@ -124,7 +136,9 @@ export async function captureLastExchange(payload: {
 }
 
 export async function requestPageStatus() {
-  return chrome.runtime.sendMessage({ type: "GET_PAGE_STATUS" });
+  return unwrapRuntimeResponse<PageStatusResponse>(
+    await chrome.runtime.sendMessage({ type: "GET_PAGE_STATUS" }),
+  );
 }
 
 export async function requestCurrentPlatformPermission() {

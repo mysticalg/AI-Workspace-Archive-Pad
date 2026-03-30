@@ -1,9 +1,11 @@
 import { useState } from "react";
+import type { PageStatusResponse } from "lib/appState";
 import type { Project } from "types/project";
 
 interface SavePanelProps {
   projects: Project[];
   selectedProjectId?: string;
+  pageStatus?: PageStatusResponse;
   onSelectProject: (projectId: string) => void;
   onSave: (
     mode: "current" | "selection" | "exchange",
@@ -14,6 +16,7 @@ interface SavePanelProps {
 export function SavePanel({
   projects,
   selectedProjectId,
+  pageStatus,
   onSelectProject,
   onSave,
 }: SavePanelProps) {
@@ -30,6 +33,13 @@ export function SavePanel({
       .filter(Boolean),
     notes: notes.trim() || undefined,
   };
+
+  const currentDisabled = busyMode !== null || !pageStatus?.captureReady;
+  const selectionDisabled =
+    busyMode !== null || !pageStatus?.captureReady || !pageStatus?.hasSelection;
+  const exchangeDisabled = busyMode !== null || !pageStatus?.captureReady;
+  const helperMessage =
+    statusMessage || pageStatus?.reason || "Open a supported AI workspace to capture visible conversation content.";
 
   const handleSave = async (mode: "current" | "selection" | "exchange") => {
     setBusyMode(mode);
@@ -50,7 +60,7 @@ export function SavePanel({
       <div className="section-header">
         <div>
           <h3>Capture Console</h3>
-          <div className="muted">Whole thread, selected range, or last prompt/output pair.</div>
+          <div className="muted">{pageStatus?.title ?? "Whole thread, selected range, or last prompt/output pair."}</div>
         </div>
         <span className="badge warn">Manual capture only</span>
       </div>
@@ -93,17 +103,29 @@ export function SavePanel({
       </div>
 
       <div className="toolbar">
-        <button className="button-primary" onClick={() => void handleSave("current")}>
+        <button
+          className="button-primary"
+          disabled={currentDisabled}
+          onClick={() => void handleSave("current")}
+        >
           {busyMode === "current" ? "Saving..." : "Save Current Chat"}
         </button>
-        <button className="button-secondary" onClick={() => void handleSave("selection")}>
+        <button
+          className="button-secondary"
+          disabled={selectionDisabled}
+          onClick={() => void handleSave("selection")}
+        >
           {busyMode === "selection" ? "Saving..." : "Save Selection"}
         </button>
-        <button className="button-soft" onClick={() => void handleSave("exchange")}>
+        <button
+          className="button-soft"
+          disabled={exchangeDisabled}
+          onClick={() => void handleSave("exchange")}
+        >
           {busyMode === "exchange" ? "Saving..." : "Save Last Exchange"}
         </button>
       </div>
-      {statusMessage ? <div className="muted">{statusMessage}</div> : null}
+      <div className="muted">{helperMessage}</div>
     </div>
   );
 }

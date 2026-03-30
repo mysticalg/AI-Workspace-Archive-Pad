@@ -8,10 +8,12 @@ import {
   exportProject,
   exportRecord,
   loadAppData,
+  requestPageStatus,
   searchRecords,
 } from "lib/appState";
-import { isDemoMode, seedDemoWorkspace } from "lib/demo";
+import { getDemoPageStatus, isDemoMode, seedDemoWorkspace } from "lib/demo";
 import type { ArchiveRecord } from "types/archive";
+import type { PageStatusResponse } from "lib/appState";
 import type { Project } from "types/project";
 import type { Settings } from "types/settings";
 import { ProjectSelector } from "./components/ProjectSelector";
@@ -46,6 +48,7 @@ export default function App() {
   const [records, setRecords] = useState<ArchiveRecord[]>([]);
   const [searchResults, setSearchResults] = useState<ArchiveRecord[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [pageStatus, setPageStatus] = useState<PageStatusResponse>({});
   const [selectedProjectId, setSelectedProjectId] = useState<string>();
   const [ready, setReady] = useState(false);
 
@@ -54,11 +57,15 @@ export default function App() {
       await seedDemoWorkspace();
     }
 
-    const data = await loadAppData();
+    const [data, currentPageStatus] = await Promise.all([
+      loadAppData(),
+      demoMode ? Promise.resolve(getDemoPageStatus()) : requestPageStatus(),
+    ]);
     setProjects(data.projects);
     setRecords(data.records);
     setSearchResults(data.records);
     setSettings(data.settings);
+    setPageStatus(currentPageStatus ?? {});
     setSelectedProjectId((current) => current ?? data.settings.defaultProjectId ?? data.projects[0]?.id);
   };
 
@@ -160,6 +167,7 @@ export default function App() {
         <SavePanel
           projects={projects}
           selectedProjectId={selectedProjectId}
+          pageStatus={pageStatus}
           onSelectProject={setSelectedProjectId}
           onSave={handleSave}
         />

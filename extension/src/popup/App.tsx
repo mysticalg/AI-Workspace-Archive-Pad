@@ -7,24 +7,13 @@ import {
   requestPageStatus,
 } from "lib/appState";
 import { getDemoPageStatus, isDemoMode, seedDemoWorkspace } from "lib/demo";
+import type { PageStatusResponse } from "lib/appState";
 import type { ArchiveRecord } from "types/archive";
 import type { Project } from "types/project";
 
-interface PageStatus {
-  supported?: boolean;
-  supportedUrl?: boolean;
-  captureReady?: boolean;
-  enabled?: boolean;
-  permissionGranted?: boolean;
-  platform?: string;
-  title?: string;
-  hasSelection?: boolean;
-  reason?: string;
-}
-
 export default function App() {
   const demoMode = isDemoMode();
-  const [status, setStatus] = useState<PageStatus>({});
+  const [status, setStatus] = useState<PageStatusResponse>({});
   const [projects, setProjects] = useState<Project[]>([]);
   const [records, setRecords] = useState<ArchiveRecord[]>([]);
   const [onboardingCompleted, setOnboardingCompleted] = useState(true);

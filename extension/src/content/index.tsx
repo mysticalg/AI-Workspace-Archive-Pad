@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { CaptureDraft } from "types/archive";
 import { cleanTextFromMessages } from "lib/normalize";
@@ -178,7 +178,8 @@ function buildLastExchangeDraft(parsed: ReturnType<typeof parseCurrentDocument>)
 }
 
 function App() {
-  const [status, setStatus] = useState("Ready");
+  const [inspection, setInspection] = useState<InspectionResult>(() => inspectCurrentDocument());
+  const [flash, setFlash] = useState<{ label: string; detail?: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [toolbar, setToolbar] = useState<ToolbarState>({
     x: 0,
@@ -186,13 +187,42 @@ function App() {
     visible: false,
   });
 
-  const parser = useMemo(() => resolveParser(), []);
-  const pageLabel = parser
-    ? `Connected to ${parser.platform[0].toUpperCase()}${parser.platform.slice(1)}`
+  const pageLabel = inspection.platform
+    ? `Connected to ${inspection.platform[0].toUpperCase()}${inspection.platform.slice(1)}`
     : "Unsupported page";
+  const status = flash?.label ?? (busy ? "Saving" : inspection.captureReady ? "Ready" : "Blocked");
+  const detail = flash?.detail ?? inspection.reason;
+
+  useEffect(() => {
+    const refreshInspection = () => {
+      const next = inspectCurrentDocument();
+      setInspection(next);
+      if (!next.captureReady) {
+        setToolbar((current) => ({ ...current, visible: false }));
+      }
+    };
+
+    refreshInspection();
+    const intervalId = window.setInterval(refreshInspection, 2500);
+    window.addEventListener("focus", refreshInspection);
+    window.addEventListener("popstate", refreshInspection);
+    window.addEventListener("hashchange", refreshInspection);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshInspection);
+      window.removeEventListener("popstate", refreshInspection);
+      window.removeEventListener("hashchange", refreshInspection);
+    };
+  }, []);
 
   useEffect(() => {
     const onMouseUp = () => {
+      if (!inspection.captureReady) {
+        setToolbar((current) => ({ ...current, visible: false }));
+        return;
+      }
+
       const selection = window.getSelection();
       if (!selection || selection.rangeCount === 0 || !selection.toString().trim()) {
         setToolbar((current) => ({ ...current, visible: false }));
@@ -222,11 +252,11 @@ function App() {
       document.removeEventListener("keyup", onMouseUp);
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, []);
+  }, [inspection.captureReady]);
 
   const sendCapture = async (messageType: "CAPTURE_CURRENT_PAGE" | "CAPTURE_SELECTION") => {
     setBusy(true);
-    setStatus("Saving");
+    setFlash(null);
 
     try {
       const response = unwrapRuntimeResponse<{ deduped?: boolean }>(
@@ -236,13 +266,19 @@ function App() {
         }),
       );
 
-      setStatus(response?.deduped ? "Already saved" : "Saved");
+      setFlash({
+        label: response?.deduped ? "Already saved" : "Saved",
+      });
       setToolbar((current) => ({ ...current, visible: false }));
+      setInspection(inspectCurrentDocument());
     } catch (value) {
-      setStatus(value instanceof Error ? value.message : "Capture failed");
+      setFlash({
+        label: "Blocked",
+        detail: value instanceof Error ? value.message : "Capture failed.",
+      });
     } finally {
       setBusy(false);
-      window.setTimeout(() => setStatus("Ready"), 2000);
+      window.setTimeout(() => setFlash(null), 2200);
     }
   };
 
@@ -252,6 +288,8 @@ function App() {
         isBusy={busy}
         pageLabel={pageLabel}
         status={status}
+        detail={detail}
+        saveDisabled={!inspection.captureReady}
         onSavePage={() => void sendCapture("CAPTURE_CURRENT_PAGE")}
         onOpenSidePanel={() =>
           void chrome.runtime.sendMessage({ type: "OPEN_SIDE_PANEL_REQUESTED" })
