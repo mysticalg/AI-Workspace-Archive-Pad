@@ -8,17 +8,15 @@ const parser: PlatformParser = {
   parse(document) {
     return parseConversationWithConfig(document, {
       platform: "claude",
-      rootSelectors: ["main", "[data-test-id='conversation']", "[class*='conversation']", "body"],
+      rootSelectors: ["main", "[data-test-id='conversation']", "body"],
       messageSelectors: [
-        "[data-testid*='message']",
-        "[class*='font-claude-message']",
-        "[class*='message']",
+        "[data-testid='user-message']",
+        ".font-claude-response.relative",
       ],
-      titleSelectors: ["main h1", "header h1", "title"],
-      modelSelectors: ["header button", "header div", "[data-testid*='model']"],
+      titleSelectors: ["[data-testid='chat-title-button']", "title"],
+      modelSelectors: ["[data-testid='model-selector-dropdown']", "[data-testid*='model']", "header button"],
     });
   },
 };
 
 export default parser;
-

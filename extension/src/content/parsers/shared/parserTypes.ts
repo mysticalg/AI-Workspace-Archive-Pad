@@ -57,11 +57,30 @@ function dropNested(elements: Element[]) {
   );
 }
 
+function sortByDocumentOrder(elements: Element[]) {
+  return [...elements].sort((left, right) => {
+    if (left === right) {
+      return 0;
+    }
+
+    const position = left.compareDocumentPosition(right);
+    if (position & 2) {
+      return 1;
+    }
+
+    if (position & 4) {
+      return -1;
+    }
+
+    return 0;
+  });
+}
+
 export function queryAllUnique(root: ParentNode, selectors: string[]) {
   const nodes = uniqueElements(
     selectors.flatMap((selector) => Array.from(root.querySelectorAll(selector))),
   );
-  return dropNested(nodes);
+  return sortByDocumentOrder(dropNested(nodes));
 }
 
 export function inferRole(element: Element): ArchiveMessage["role"] {
@@ -70,26 +89,38 @@ export function inferRole(element: Element): ArchiveMessage["role"] {
     return explicit;
   }
 
-  const joined =
+  const metadata =
     [
       element.getAttribute("data-testid"),
       element.getAttribute("aria-label"),
       element.className,
-      element.textContent?.slice(0, 80),
     ]
       .filter(Boolean)
       .join(" ")
       .toLowerCase() ?? "";
 
-  if (/(user|human|prompt|you said)/.test(joined)) {
-    return "user";
-  }
-
-  if (/(assistant|claude|chatgpt|gemini|model|response)/.test(joined)) {
+  if (/(assistant|claude|chatgpt|gemini|model|response|prose)/.test(metadata)) {
     return "assistant";
   }
 
-  if (/(system|tool)/.test(joined)) {
+  if (/(user|human|prompt|query)/.test(metadata)) {
+    return "user";
+  }
+
+  if (/(system|tool)/.test(metadata)) {
+    return "system";
+  }
+
+  const text = element.textContent?.slice(0, 80).toLowerCase() ?? "";
+  if (/(you said|human:|user:|prompt:)/.test(text)) {
+    return "user";
+  }
+
+  if (/(assistant|claude|chatgpt|gemini|model|response)/.test(text)) {
+    return "assistant";
+  }
+
+  if (/(system|tool)/.test(text)) {
     return "system";
   }
 

@@ -8,17 +8,27 @@ const parser: PlatformParser = {
   parse(document) {
     return parseConversationWithConfig(document, {
       platform: "gemini",
-      rootSelectors: ["main", "chat-app", "bard-sidenav-container", "body"],
-      messageSelectors: [
-        "message-content",
-        "[data-test-id*='message']",
-        "[class*='conversation-container'] > div",
+      rootSelectors: [
+        "chat-window-content",
+        "[data-test-id='chat-history-container']",
+        "main",
+        "chat-app",
+        "bard-sidenav-container",
+        "body",
       ],
-      titleSelectors: ["main h1", "header h1", "title"],
-      modelSelectors: ["header button", "mat-select", "[class*='model']"],
+      messageSelectors: [
+        "div.user-query-container",
+        "div.response-container",
+      ],
+      titleSelectors: ["[data-test-id='conversation-title']", "main h1", "header h1", "title"],
+      modelSelectors: [
+        "[data-test-id='bard-mode-menu-button']",
+        "[data-test-id*='mode']",
+        "mat-select",
+        "[class*='model']",
+      ],
     });
   },
 };
 
 export default parser;
-

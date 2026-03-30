@@ -45,6 +45,7 @@ Live parser QA environment overrides:
 - `AIWA_QA_INCLUDE_INDEXEDDB=1` to include IndexedDB-backed app state
 - `AIWA_QA_INCLUDE_SERVICE_WORKER=1` to include service-worker storage when a platform depends on it
 - `AIWA_QA_HEADLESS=1` to run the probe without opening visible Chrome windows
+- `AIWA_QA_CDP_ENDPOINT=http://127.0.0.1:9222` to attach to an already running signed-in Chrome session instead of using a copied profile snapshot
 
 ## Notes
 
@@ -54,5 +55,6 @@ Live parser QA environment overrides:
 - Cloud sync and billing are scaffolded but not yet production-integrated.
 - Generated Chrome Web Store assets are written to `assets/chrome-web-store/`.
 - A Chrome Web Store upload ZIP is written to `artifacts/` by `npm run package:extension`.
-- `npm run qa:live-parsers` uses a copied local Chrome profile snapshot and writes screenshots plus a JSON report under `output/playwright/`.
+- `npm run qa:live-parsers` supports both copied-profile snapshot mode and attached-browser mode, and writes screenshots plus a JSON report under `output/playwright/`.
+- Attached-browser mode is the most reliable way to validate real signed-in sessions on challenge-heavy sites. Start Chrome with remote debugging enabled, for example: `chrome.exe --remote-debugging-port=9222 --user-data-dir=D:\aiwa-temp\qa-browser-profile --profile-directory=Default`.
 - The website includes a manual GitHub Pages workflow in `.github/workflows/deploy-website.yml` for use after Pages is enabled in repo settings.

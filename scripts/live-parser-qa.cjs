@@ -20,34 +20,44 @@ const PLATFORM_CONFIGS = [
   {
     platform: "claude",
     homeUrl: "https://claude.ai/",
-    rootSelectors: ["main", "[data-test-id='conversation']", "[class*='conversation']", "body"],
+    rootSelectors: ["main", "[data-test-id='conversation']", "body"],
     messageSelectors: [
-      "[data-testid*='message']",
-      "[class*='font-claude-message']",
-      "[class*='message']",
+      "[data-testid='user-message']",
+      ".font-claude-response.relative",
     ],
-    titleSelectors: ["main h1", "header h1", "title"],
-    modelSelectors: ["header button", "header div", "[data-testid*='model']"],
+    titleSelectors: ["[data-testid='chat-title-button']", "title"],
+    modelSelectors: ["[data-testid='model-selector-dropdown']", "[data-testid*='model']", "header button"],
     conversationHrefPatterns: ["/chat/"],
   },
   {
     platform: "gemini",
     homeUrl: "https://gemini.google.com/",
-    rootSelectors: ["main", "chat-app", "bard-sidenav-container", "body"],
-    messageSelectors: [
-      "message-content",
-      "[data-test-id*='message']",
-      "[class*='conversation-container'] > div",
+    rootSelectors: [
+      "chat-window-content",
+      "[data-test-id='chat-history-container']",
+      "main",
+      "chat-app",
+      "bard-sidenav-container",
+      "body",
     ],
-    titleSelectors: ["main h1", "header h1", "title"],
-    modelSelectors: ["header button", "mat-select", "[class*='model']"],
+    messageSelectors: [
+      "div.user-query-container",
+      "div.response-container",
+    ],
+    titleSelectors: ["[data-test-id='conversation-title']", "main h1", "header h1", "title"],
+    modelSelectors: [
+      "[data-test-id='bard-mode-menu-button']",
+      "[data-test-id*='mode']",
+      "mat-select",
+      "[class*='model']",
+    ],
     conversationHrefPatterns: ["/app/"],
   },
   {
     platform: "perplexity",
     homeUrl: "https://www.perplexity.ai/",
-    rootSelectors: ["main", "[class*='thread']", "[class*='conversation']", "body"],
-    messageSelectors: ["[class*='thread-message']", "[class*='message']", "article"],
+    rootSelectors: ["main", "[role='tabpanel']", "[class*='thread']", "[class*='conversation']", "body"],
+    messageSelectors: ["h1[class*='group/query']", "div.prose"],
     titleSelectors: ["main h1", "header h1", "title"],
     modelSelectors: ["header button", "[class*='model']", "[data-testid*='model']"],
     conversationHrefPatterns: ["/search/", "/page/"],
@@ -308,11 +318,30 @@ async function collectProbe(page, config) {
       );
     }
 
+    function sortByDocumentOrder(elements) {
+      return [...elements].sort((left, right) => {
+        if (left === right) {
+          return 0;
+        }
+
+        const position = left.compareDocumentPosition(right);
+        if (position & 2) {
+          return 1;
+        }
+
+        if (position & 4) {
+          return -1;
+        }
+
+        return 0;
+      });
+    }
+
     function queryAllUnique(root, selectors) {
       const nodes = uniqueElements(
         selectors.flatMap((selector) => Array.from(root.querySelectorAll(selector))),
       );
-      return dropNested(nodes);
+      return sortByDocumentOrder(dropNested(nodes));
     }
 
     function inferRole(element) {
@@ -321,25 +350,37 @@ async function collectProbe(page, config) {
         return explicit;
       }
 
-      const joined = [
+      const metadata = [
         element.getAttribute("data-testid"),
         element.getAttribute("aria-label"),
         typeof element.className === "string" ? element.className : undefined,
-        text(element.textContent, 80),
       ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
 
-      if (/(user|human|prompt|you said)/.test(joined)) {
-        return "user";
-      }
-
-      if (/(assistant|claude|chatgpt|gemini|model|response)/.test(joined)) {
+      if (/(assistant|claude|chatgpt|gemini|model|response|prose)/.test(metadata)) {
         return "assistant";
       }
 
-      if (/(system|tool)/.test(joined)) {
+      if (/(user|human|prompt|query)/.test(metadata)) {
+        return "user";
+      }
+
+      if (/(system|tool)/.test(metadata)) {
+        return "system";
+      }
+
+      const previewText = text(element.textContent, 80).toLowerCase();
+      if (/(you said|human:|user:|prompt:)/.test(previewText)) {
+        return "user";
+      }
+
+      if (/(assistant|claude|chatgpt|gemini|model|response)/.test(previewText)) {
+        return "assistant";
+      }
+
+      if (/(system|tool)/.test(previewText)) {
         return "system";
       }
 
@@ -539,41 +580,62 @@ async function probePlatform(context, reportDir, config) {
 
 async function main() {
   const repo = process.cwd();
-  const chromeUserDataRoot =
-    process.env.AIWA_CHROME_USER_DATA_DIR ??
-    path.join(process.env.LOCALAPPDATA ?? path.join(os.homedir(), "AppData", "Local"), "Google", "Chrome", "User Data");
-  const localStatePath = path.join(chromeUserDataRoot, "Local State");
-  if (!fs.existsSync(localStatePath)) {
-    throw new Error(`Chrome Local State not found at ${localStatePath}`);
-  }
-
-  const localState = readJson(localStatePath);
-  const profileName = process.env.AIWA_CHROME_PROFILE ?? localState.profile?.last_used ?? "Default";
-  const sourceProfileDir = path.join(chromeUserDataRoot, profileName);
-  if (!fs.existsSync(sourceProfileDir)) {
-    throw new Error(`Chrome profile not found at ${sourceProfileDir}`);
-  }
-
-  const snapshotBase = process.env.AIWA_QA_SNAPSHOT_ROOT ?? os.tmpdir();
-  ensureDirectory(snapshotBase);
-  const snapshotRoot = fs.mkdtempSync(path.join(snapshotBase, "aiwa-live-parser-"));
+  const cdpEndpoint = process.env.AIWA_QA_CDP_ENDPOINT;
   const timestamp = sanitizeSegment(new Date().toISOString());
   const reportDir = path.join(repo, "output", "playwright", `live-parser-qa-${timestamp}`);
   ensureDirectory(reportDir);
+  const headless = cdpEndpoint ? false : isTruthyEnv("AIWA_QA_HEADLESS");
 
-  const copySummary = buildProfileSnapshot(chromeUserDataRoot, profileName, snapshotRoot);
-  const headless = isTruthyEnv("AIWA_QA_HEADLESS");
+  let chromeUserDataRoot = null;
+  let profileName = null;
+  let snapshotRoot = null;
+  let copySummary = null;
+  let browser = null;
+  let context = null;
 
-  const context = await chromium.launchPersistentContext(snapshotRoot, {
-    channel: "chrome",
-    headless,
-    viewport: { width: 1440, height: 1100 },
-    args: [
-      `--profile-directory=${profileName}`,
-      "--no-first-run",
-      "--no-default-browser-check",
-    ],
-  });
+  if (cdpEndpoint) {
+    browser = await chromium.connectOverCDP(cdpEndpoint);
+    context = browser.contexts()[0];
+    if (!context) {
+      throw new Error(`No browser context available via CDP endpoint ${cdpEndpoint}`);
+    }
+  } else {
+    chromeUserDataRoot =
+      process.env.AIWA_CHROME_USER_DATA_DIR ??
+      path.join(
+        process.env.LOCALAPPDATA ?? path.join(os.homedir(), "AppData", "Local"),
+        "Google",
+        "Chrome",
+        "User Data",
+      );
+    const localStatePath = path.join(chromeUserDataRoot, "Local State");
+    if (!fs.existsSync(localStatePath)) {
+      throw new Error(`Chrome Local State not found at ${localStatePath}`);
+    }
+
+    const localState = readJson(localStatePath);
+    profileName = process.env.AIWA_CHROME_PROFILE ?? localState.profile?.last_used ?? "Default";
+    const sourceProfileDir = path.join(chromeUserDataRoot, profileName);
+    if (!fs.existsSync(sourceProfileDir)) {
+      throw new Error(`Chrome profile not found at ${sourceProfileDir}`);
+    }
+
+    const snapshotBase = process.env.AIWA_QA_SNAPSHOT_ROOT ?? os.tmpdir();
+    ensureDirectory(snapshotBase);
+    snapshotRoot = fs.mkdtempSync(path.join(snapshotBase, "aiwa-live-parser-"));
+    copySummary = buildProfileSnapshot(chromeUserDataRoot, profileName, snapshotRoot);
+
+    context = await chromium.launchPersistentContext(snapshotRoot, {
+      channel: "chrome",
+      headless,
+      viewport: { width: 1440, height: 1100 },
+      args: [
+        `--profile-directory=${profileName}`,
+        "--no-first-run",
+        "--no-default-browser-check",
+      ],
+    });
+  }
 
   try {
     const platforms = [];
@@ -583,6 +645,8 @@ async function main() {
 
     const report = {
       generatedAt: new Date().toISOString(),
+      mode: cdpEndpoint ? "attached" : "snapshot",
+      cdpEndpoint: cdpEndpoint ?? null,
       chromeUserDataRoot,
       profileName,
       headless,
@@ -600,8 +664,14 @@ async function main() {
     fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
     console.log(JSON.stringify(report, null, 2));
   } finally {
-    await context.close().catch(() => {});
-    fs.rmSync(snapshotRoot, { recursive: true, force: true });
+    if (cdpEndpoint) {
+      await browser?.close().catch(() => {});
+    } else {
+      await context?.close().catch(() => {});
+      if (snapshotRoot) {
+        fs.rmSync(snapshotRoot, { recursive: true, force: true });
+      }
+    }
   }
 }
 

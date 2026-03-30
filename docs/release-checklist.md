@@ -3,6 +3,7 @@
 ## Product
 
 - Run `npm run qa:live-parsers` and review the signed-in DOM report for ChatGPT, Claude, Gemini, and Perplexity.
+- If copied-profile mode falls back to login walls or challenge pages, rerun with `AIWA_QA_CDP_ENDPOINT=http://127.0.0.1:9222` against a manually launched signed-in Chrome session.
 - Review first-run onboarding and popup messaging on a clean Chrome profile.
 - Confirm exports open cleanly in Markdown viewers, PDF readers, and Word.
 - Run `npm run qa:extension` and review the generated artifacts under `output/playwright/`.
