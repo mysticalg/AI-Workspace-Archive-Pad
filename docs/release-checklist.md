@@ -20,12 +20,12 @@
 
 - Run `npm run assets:store`
 - Review `docs/chrome-web-store-submission.md`
-- Deploy the website so `privacy.html` and `support.html` are publicly reachable
-- Confirm the GitHub Pages workflow succeeded and note the final public URLs
-- If GitHub Pages is not enabled for the repo yet, enable it in repository settings before running the manual workflow
+- Confirm the GitHub Pages site is live at `https://mysticalg.github.io/AI-Workspace-Archive-Pad/`
+- Confirm `https://mysticalg.github.io/AI-Workspace-Archive-Pad/privacy.html` returns `200`
+- Confirm `https://mysticalg.github.io/AI-Workspace-Archive-Pad/support.html` returns `200`
 - Review privacy policy against actual shipped behavior
 - Re-check permissions and disclosures before submission
-- Publish a real privacy policy URL and support URL before store submission
+- Use the live Pages privacy and support URLs in the Chrome Web Store dashboard before submission
 
 ## Platform
 

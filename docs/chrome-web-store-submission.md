@@ -8,7 +8,9 @@ This repo now includes a reproducible asset pack under `assets/chrome-web-store/
 - Small promo tile: `assets/chrome-web-store/small-promo-tile.png`
 - Marquee promo tile: `assets/chrome-web-store/marquee-promo-tile.png`
 - Asset manifest: `assets/chrome-web-store/asset-manifest.json`
-- Hosted site target after GitHub Pages is enabled and the manual workflow is run: `https://<owner>.github.io/AI-Workspace-Archive-Pad/`
+- Hosted site: `https://mysticalg.github.io/AI-Workspace-Archive-Pad/`
+- Privacy policy URL: `https://mysticalg.github.io/AI-Workspace-Archive-Pad/privacy.html`
+- Support URL: `https://mysticalg.github.io/AI-Workspace-Archive-Pad/support.html`
 
 Run this before refreshing the pack:
 
@@ -122,10 +124,10 @@ If a later release introduces gated cloud features, add reviewer credentials in 
 
 ## Final pre-submit checks
 
-- Host a real privacy policy URL based on `docs/privacy-policy.md`
-- Add a real support URL in the developer dashboard
+- Use `https://mysticalg.github.io/AI-Workspace-Archive-Pad/privacy.html` as the Chrome Web Store privacy-policy URL
+- Use `https://mysticalg.github.io/AI-Workspace-Archive-Pad/support.html` as the Chrome Web Store support URL
 - Re-run `npm run qa:extension`
 - Re-run `npm run assets:store`
 - Rebuild the upload ZIP with `npm run package:extension`
 - Re-check dashboard privacy answers against the latest extension package
-- After Pages is enabled and the workflow is run, use `/privacy.html` as the privacy-policy URL and `/support.html` as the support URL
+- Verify the live Pages URLs still return `200` before submission

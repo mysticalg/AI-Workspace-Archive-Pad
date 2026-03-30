@@ -1,12 +1,23 @@
 name: Deploy Website
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/deploy-website.yml
+      - package-lock.json
+      - package.json
+      - website/**
   workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 concurrency:
   group: github-pages
