@@ -31,6 +31,7 @@ AI Workspace Archive is a local-first Chrome extension for saving, organizing, s
 - `npm run build`
 - `npm run assets:store`
 - `npm run package:extension`
+- `npm run qa:release`
 - `npm run qa:extension`
 - `npm run qa:live-parsers`
 - `npm run test -w extension`
@@ -56,5 +57,6 @@ Live parser QA environment overrides:
 - Generated Chrome Web Store assets are written to `assets/chrome-web-store/`.
 - A Chrome Web Store upload ZIP is written to `artifacts/` by `npm run package:extension`.
 - `npm run qa:live-parsers` supports both copied-profile snapshot mode and attached-browser mode, and writes screenshots plus a JSON report under `output/playwright/`.
+- `npm run qa:release` runs the local pre-submit pass: build, tests, extension QA, store asset generation, and extension packaging.
 - Attached-browser mode is the most reliable way to validate real signed-in sessions on challenge-heavy sites. Start Chrome with remote debugging enabled, for example: `chrome.exe --remote-debugging-port=9222 --user-data-dir=D:\aiwa-temp\qa-browser-profile --profile-directory=Default`.
 - The website includes a manual GitHub Pages workflow in `.github/workflows/deploy-website.yml` for use after Pages is enabled in repo settings.

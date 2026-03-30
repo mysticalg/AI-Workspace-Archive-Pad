@@ -11,6 +11,7 @@
     "build": "npm run build --workspaces",
     "assets:store": "node scripts/generate-store-assets.cjs",
     "package:extension": "node scripts/package-extension.cjs",
+    "qa:release": "npm run build && npm test && npm run qa:extension && npm run assets:store && npm run package:extension",
     "qa:extension": "node scripts/qa-extension.cjs",
     "qa:live-parsers": "node scripts/live-parser-qa.cjs",
     "test": "npm run test --workspaces --if-present",

@@ -2,6 +2,7 @@
 
 ## Product
 
+- Run `npm run qa:release` for the local pre-submit pass.
 - Run `npm run qa:live-parsers` and review the signed-in DOM report for ChatGPT, Claude, Gemini, and Perplexity.
 - If copied-profile mode falls back to login walls or challenge pages, rerun with `AIWA_QA_CDP_ENDPOINT=http://127.0.0.1:9222` against a manually launched signed-in Chrome session.
 - Review first-run onboarding and popup messaging on a clean Chrome profile.
@@ -11,8 +12,7 @@
 
 ## Quality
 
-- Run `npm run build`
-- Run `npm run test -w extension`
+- `npm run test -w extension` now covers parser fixtures, export bundle generation, and local wipe/delete reset behavior.
 - Manually test import of normalized JSON and ChatGPT export ZIP/JSON
 - Verify local wipe and record deletion behaviors
 

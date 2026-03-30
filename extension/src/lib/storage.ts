@@ -11,7 +11,7 @@ import type { Snippet } from "types/snippet";
 const DEFAULT_SETTINGS: Settings = {
   id: "settings",
   storageMode: "local-only",
-  enabledPlatforms: ["chatgpt", "claude", "gemini"],
+  enabledPlatforms: ["chatgpt", "claude", "gemini", "perplexity"],
   defaultTags: [],
   exportDefaults: {
     includeFrontmatter: true,

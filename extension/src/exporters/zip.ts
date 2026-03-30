@@ -34,8 +34,8 @@ export async function projectToZipBlob(project: Project, records: ArchiveRecord[
     const base = slug(record.sourceTitle || record.id) || record.id;
     folder.file(`${base}.md`, archiveRecordToMarkdown(record, project));
     folder.file(`${base}.json`, archiveRecordToJson(record, true));
-    folder.file(`${base}.pdf`, await archiveRecordToPdfBlob(record, project));
-    folder.file(`${base}.docx`, await archiveRecordToDocxBlob(record, project));
+    folder.file(`${base}.pdf`, await (await archiveRecordToPdfBlob(record, project)).arrayBuffer());
+    folder.file(`${base}.docx`, await (await archiveRecordToDocxBlob(record, project)).arrayBuffer());
   }
 
   return zip.generateAsync({ type: "blob" });

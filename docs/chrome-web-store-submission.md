@@ -12,11 +12,8 @@ This repo now includes a reproducible asset pack under `assets/chrome-web-store/
 
 Run this before refreshing the pack:
 
-1. `npm run build`
-2. `npm run test`
-3. `npm run qa:extension`
-4. `npm run assets:store`
-5. `npm run package:extension`
+1. `npm run qa:release`
+2. `npm run qa:live-parsers`
 
 ## Suggested listing metadata
 
