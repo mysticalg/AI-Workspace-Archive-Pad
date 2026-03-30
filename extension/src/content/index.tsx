@@ -2,12 +2,14 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { CaptureDraft } from "types/archive";
 import { cleanTextFromMessages } from "lib/normalize";
+import { unwrapRuntimeResponse } from "lib/runtime";
 import { SaveButton } from "./inject/saveButton";
 import { SelectionToolbar } from "./inject/selectionToolbar";
 import chatgptParser from "./parsers/chatgpt";
 import claudeParser from "./parsers/claude";
 import geminiParser from "./parsers/gemini";
 import perplexityParser from "./parsers/perplexity";
+import { assessCaptureReadiness } from "./parsers/shared/readiness";
 
 const parsers = [chatgptParser, claudeParser, geminiParser, perplexityParser];
 
@@ -23,6 +25,15 @@ type ContentRequest =
   | { type: "PARSE_SELECTION" }
   | { type: "PARSE_LAST_EXCHANGE" };
 
+type InspectionResult = {
+  supported: boolean;
+  platform?: string;
+  title?: string;
+  captureReady: boolean;
+  reason: string;
+  parsed: ReturnType<typeof parseCurrentDocument>;
+};
+
 function resolveParser() {
   return parsers.find((parser) => parser.matches(location.href));
 }
@@ -30,6 +41,59 @@ function resolveParser() {
 function parseCurrentDocument() {
   const parser = resolveParser();
   return parser?.parse(document) ?? null;
+}
+
+function inspectCurrentDocument(): InspectionResult {
+  const parser = resolveParser();
+  if (!parser) {
+    return {
+      supported: false,
+      captureReady: false,
+      reason: "Open ChatGPT, Claude, Gemini, or Perplexity to capture a visible AI conversation.",
+      parsed: null,
+      title: document.title,
+    };
+  }
+
+  const parsed = parser.parse(document);
+  if (!parsed) {
+    return {
+      supported: true,
+      platform: parser.platform,
+      title: document.title,
+      captureReady: false,
+      reason: `Open an existing ${parser.platform} conversation with visible messages before capture.`,
+      parsed: null,
+    };
+  }
+
+  const readiness = assessCaptureReadiness({
+    platform: parsed.platform,
+    url: location.href,
+    pageTitle: document.title,
+    sourceTitle: parsed.sourceTitle,
+    bodyText: document.body?.innerText ?? document.body?.textContent ?? "",
+    cleanText: parsed.cleanText,
+    parsedMessageCount: parsed.messages.length,
+    candidateMessageCount: parsed.candidateMessageCount,
+    usedFallback: parsed.usedFallback,
+    hasUserMessage: parsed.messages.some((message) => message.role === "user"),
+    hasAssistantMessage: parsed.messages.some((message) => message.role === "assistant"),
+    hasComposer: Boolean(
+      document.querySelector(
+        "textarea, [contenteditable='true'], input[placeholder*='Ask'], input[placeholder*='Message']",
+      ),
+    ),
+  });
+
+  return {
+    supported: true,
+    platform: parsed.platform,
+    title: parsed.sourceTitle ?? document.title,
+    captureReady: readiness.ready,
+    reason: readiness.reason,
+    parsed: readiness.ready ? parsed : null,
+  };
 }
 
 function buildSelectionDraft(parsed: ReturnType<typeof parseCurrentDocument>) {
@@ -165,15 +229,17 @@ function App() {
     setStatus("Saving");
 
     try {
-      const response = await chrome.runtime.sendMessage({
-        type: messageType,
-        payload: { tags: [] },
-      });
+      const response = unwrapRuntimeResponse<{ deduped?: boolean }>(
+        await chrome.runtime.sendMessage({
+          type: messageType,
+          payload: { tags: [] },
+        }),
+      );
 
       setStatus(response?.deduped ? "Already saved" : "Saved");
       setToolbar((current) => ({ ...current, visible: false }));
-    } catch {
-      setStatus("Capture failed");
+    } catch (value) {
+      setStatus(value instanceof Error ? value.message : "Capture failed");
     } finally {
       setBusy(false);
       window.setTimeout(() => setStatus("Ready"), 2000);
@@ -233,27 +299,29 @@ if (!document.getElementById("aiwa-overlay-host")) {
 
 chrome.runtime.onMessage.addListener((message: ContentRequest, _sender, sendResponse) => {
   if (message.type === "GET_PAGE_STATUS") {
-    const parsed = parseCurrentDocument();
+    const inspection = inspectCurrentDocument();
     sendResponse({
-      supported: Boolean(parsed),
-      platform: parsed?.platform,
-      title: parsed?.sourceTitle ?? document.title,
+      supported: inspection.supported,
+      platform: inspection.platform,
+      title: inspection.title ?? document.title,
+      captureReady: inspection.captureReady,
+      reason: inspection.reason,
       hasSelection: Boolean(window.getSelection()?.toString().trim()),
     });
     return;
   }
 
   if (message.type === "PARSE_PAGE") {
-    sendResponse(parseCurrentDocument());
+    sendResponse(inspectCurrentDocument().parsed);
     return;
   }
 
   if (message.type === "PARSE_SELECTION") {
-    sendResponse(buildSelectionDraft(parseCurrentDocument()));
+    sendResponse(buildSelectionDraft(inspectCurrentDocument().parsed));
     return;
   }
 
   if (message.type === "PARSE_LAST_EXCHANGE") {
-    sendResponse(buildLastExchangeDraft(parseCurrentDocument()));
+    sendResponse(buildLastExchangeDraft(inspectCurrentDocument().parsed));
   }
 });

@@ -4,6 +4,7 @@ import {
   hasPlatformPermission,
   removePlatformPermission,
 } from "lib/permissions";
+import { unwrapRuntimeResponse } from "lib/runtime";
 import { searchArchive } from "lib/search";
 import {
   canCreateMoreProjects,
@@ -16,6 +17,17 @@ import {
 import type { ArchiveRecord, SearchFilters } from "types/archive";
 import type { SupportedPlatform } from "types/archive";
 import type { ExportFormat } from "./messaging";
+
+type CaptureResponse = {
+  record: ArchiveRecord;
+  deduped: boolean;
+};
+
+type PermissionResponse = {
+  granted: boolean;
+  platform: string;
+  reason?: string;
+};
 
 function slug(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -67,7 +79,9 @@ export async function searchRecords(query: string, filters: SearchFilters = {}) 
 }
 
 export async function openSidePanel() {
-  return chrome.runtime.sendMessage({ type: "OPEN_SIDE_PANEL_REQUESTED" });
+  return unwrapRuntimeResponse<{ ok: boolean }>(
+    await chrome.runtime.sendMessage({ type: "OPEN_SIDE_PANEL_REQUESTED" }),
+  );
 }
 
 export async function captureCurrentPage(payload: {
@@ -75,10 +89,12 @@ export async function captureCurrentPage(payload: {
   tags?: string[];
   notes?: string;
 }) {
-  return chrome.runtime.sendMessage({
-    type: "CAPTURE_CURRENT_PAGE",
-    payload,
-  });
+  return unwrapRuntimeResponse<CaptureResponse>(
+    await chrome.runtime.sendMessage({
+      type: "CAPTURE_CURRENT_PAGE",
+      payload,
+    }),
+  );
 }
 
 export async function captureSelection(payload: {
@@ -86,10 +102,12 @@ export async function captureSelection(payload: {
   tags?: string[];
   notes?: string;
 }) {
-  return chrome.runtime.sendMessage({
-    type: "CAPTURE_SELECTION",
-    payload,
-  });
+  return unwrapRuntimeResponse<CaptureResponse>(
+    await chrome.runtime.sendMessage({
+      type: "CAPTURE_SELECTION",
+      payload,
+    }),
+  );
 }
 
 export async function captureLastExchange(payload: {
@@ -97,10 +115,12 @@ export async function captureLastExchange(payload: {
   tags?: string[];
   notes?: string;
 }) {
-  return chrome.runtime.sendMessage({
-    type: "CAPTURE_LAST_EXCHANGE",
-    payload,
-  });
+  return unwrapRuntimeResponse<CaptureResponse>(
+    await chrome.runtime.sendMessage({
+      type: "CAPTURE_LAST_EXCHANGE",
+      payload,
+    }),
+  );
 }
 
 export async function requestPageStatus() {
@@ -108,7 +128,16 @@ export async function requestPageStatus() {
 }
 
 export async function requestCurrentPlatformPermission() {
-  return chrome.runtime.sendMessage({ type: "REQUEST_PLATFORM_PERMISSION" });
+  return requestPlatformPermission();
+}
+
+export async function requestPlatformPermission(platform?: SupportedPlatform) {
+  return unwrapRuntimeResponse<PermissionResponse>(
+    await chrome.runtime.sendMessage({
+      type: "REQUEST_PLATFORM_PERMISSION",
+      payload: platform ? { platform } : undefined,
+    }),
+  );
 }
 
 export async function revokePlatformPermission(platform: SupportedPlatform) {
@@ -123,14 +152,18 @@ export async function getPlatformPermissionStatuses(platforms: SupportedPlatform
 }
 
 export async function wipeData() {
-  return chrome.runtime.sendMessage({ type: "WIPE_LOCAL_DATA" });
+  return unwrapRuntimeResponse<{ ok: boolean }>(
+    await chrome.runtime.sendMessage({ type: "WIPE_LOCAL_DATA" }),
+  );
 }
 
 export async function importJsonFile(text: string) {
-  return chrome.runtime.sendMessage({
-    type: "IMPORT_FILE",
-    payload: { text },
-  });
+  return unwrapRuntimeResponse<{ ok: boolean }>(
+    await chrome.runtime.sendMessage({
+      type: "IMPORT_FILE",
+      payload: { text },
+    }),
+  );
 }
 
 export async function importArchiveFile(file: File) {

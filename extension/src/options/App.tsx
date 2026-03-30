@@ -4,6 +4,7 @@ import {
   getPlatformPermissionStatuses,
   importArchiveFile,
   loadAppData,
+  requestPlatformPermission,
   revokePlatformPermission,
   updateSettings,
   wipeData,
@@ -301,10 +302,7 @@ export default function App() {
                     onClick={async () => {
                       try {
                         setSettingsError("");
-                        const result = await chrome.runtime.sendMessage({
-                          type: "REQUEST_PLATFORM_PERMISSION",
-                          payload: { platform },
-                        });
+                        const result = await requestPlatformPermission(platform);
                         setSettingsError(result?.reason ?? "");
                         await refresh();
                       } catch (value) {

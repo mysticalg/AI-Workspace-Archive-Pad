@@ -15,6 +15,8 @@ export interface ParsedMessageNode {
 
 export interface ParsedConversationResult extends CaptureDraft {
   messageNodes: ParsedMessageNode[];
+  candidateMessageCount: number;
+  usedFallback: boolean;
 }
 
 export interface ParserConfig {
@@ -130,8 +132,9 @@ export function parseConversationWithConfig(
   }
 
   const candidates = queryAllUnique(root, config.messageSelectors);
+  const usedFallback = candidates.length === 0;
   const messageNodes = compactMessages(
-    (candidates.length > 0 ? candidates : buildFallbackMessages(root)).map((element) => {
+    (usedFallback ? buildFallbackMessages(root) : candidates).map((element) => {
       if ("message" in element) {
         return element as ParsedMessageNode;
       }
@@ -170,10 +173,11 @@ export function parseConversationWithConfig(
     cleanText,
     rawSnapshotHtml: snapshot,
     messageNodes,
+    candidateMessageCount: candidates.length,
+    usedFallback,
   };
 }
 
 export function extractAttachmentsFromMessages(root: Element): ArchiveAttachment[] {
   return extractAttachments(root);
 }
-

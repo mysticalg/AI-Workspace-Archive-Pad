@@ -145,6 +145,8 @@ async function getPageStatus() {
     platform?: string;
     title?: string;
     hasSelection?: boolean;
+    captureReady?: boolean;
+    reason?: string;
   }>({ type: "GET_PAGE_STATUS" });
 
   if (!enabled) {
@@ -160,7 +162,7 @@ async function getPageStatus() {
     };
   }
 
-  if (contentStatus?.supported) {
+  if (contentStatus?.supported && contentStatus.captureReady) {
     return {
       ...contentStatus,
       supported: true,
@@ -168,7 +170,7 @@ async function getPageStatus() {
       captureReady: true,
       enabled: true,
       permissionGranted: true,
-      reason: "Ready to capture visible content from this page.",
+      reason: contentStatus.reason ?? "Ready to capture visible content from this page.",
     };
   }
 
@@ -179,8 +181,9 @@ async function getPageStatus() {
     enabled: true,
     permissionGranted: true,
     platform,
-    title: tab?.title,
+    title: contentStatus?.title ?? tab?.title,
     reason:
+      contentStatus?.reason ??
       "This is a supported site, but capture is not ready yet. Reload the page if you just installed or updated the extension.",
   };
 }
