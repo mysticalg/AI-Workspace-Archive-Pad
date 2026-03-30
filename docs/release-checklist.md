@@ -5,6 +5,7 @@
 - Validate live capture on current ChatGPT, Claude, Gemini, and Perplexity DOMs.
 - Review first-run onboarding and popup messaging on a clean Chrome profile.
 - Confirm exports open cleanly in Markdown viewers, PDF readers, and Word.
+- Run `npm run qa:extension` and review the generated artifacts under `output/playwright/`.
 
 ## Quality
 
@@ -22,6 +23,6 @@
 
 ## Platform
 
-- Decide whether to keep current supported-host access model or move to a stricter optional-permission flow before launch
+- Re-check the explicit optional site-access flow against current Chrome Web Store guidance before submission
 - Integrate real auth, licensing, and billing before enabling paid plans
 - Add live parser monitoring or scheduled QA after launch

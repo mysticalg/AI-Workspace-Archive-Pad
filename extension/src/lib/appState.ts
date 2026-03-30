@@ -1,5 +1,9 @@
 import { db } from "db/dexie";
 import { parseImportFile } from "lib/importers";
+import {
+  hasPlatformPermission,
+  removePlatformPermission,
+} from "lib/permissions";
 import { searchArchive } from "lib/search";
 import {
   canCreateMoreProjects,
@@ -10,6 +14,7 @@ import {
   upsertProject,
 } from "lib/storage";
 import type { ArchiveRecord, SearchFilters } from "types/archive";
+import type { SupportedPlatform } from "types/archive";
 import type { ExportFormat } from "./messaging";
 
 function slug(value: string) {
@@ -100,6 +105,21 @@ export async function captureLastExchange(payload: {
 
 export async function requestPageStatus() {
   return chrome.runtime.sendMessage({ type: "GET_PAGE_STATUS" });
+}
+
+export async function requestCurrentPlatformPermission() {
+  return chrome.runtime.sendMessage({ type: "REQUEST_PLATFORM_PERMISSION" });
+}
+
+export async function revokePlatformPermission(platform: SupportedPlatform) {
+  return removePlatformPermission(platform);
+}
+
+export async function getPlatformPermissionStatuses(platforms: SupportedPlatform[]) {
+  const statuses = await Promise.all(
+    platforms.map(async (platform) => [platform, await hasPlatformPermission(platform)] as const),
+  );
+  return Object.fromEntries(statuses) as Record<SupportedPlatform, boolean>;
 }
 
 export async function wipeData() {

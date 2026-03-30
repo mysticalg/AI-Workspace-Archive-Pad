@@ -25,7 +25,8 @@ export type RuntimeMessage =
   | { type: "SEARCH_RECORDS"; payload: { query: string; filters: SearchFilters } }
   | { type: "EXPORT_RECORD"; payload: { recordId: string; format: ExportFormat } }
   | { type: "EXPORT_PROJECT"; payload: { projectId: string; format: ExportFormat } }
-  | { type: "REQUEST_PLATFORM_PERMISSION"; payload: { originUrl: string } }
+  | { type: "REQUEST_PLATFORM_PERMISSION"; payload?: { platform?: string } }
+  | { type: "REMOVE_PLATFORM_PERMISSION"; payload: { platform: string } }
   | { type: "WIPE_LOCAL_DATA" }
   | { type: "IMPORT_FILE"; payload: { text: string; fileName: string } };
 
@@ -35,4 +36,3 @@ export interface AppStatePayload {
   snippets: Snippet[];
   settings: Settings;
 }
-

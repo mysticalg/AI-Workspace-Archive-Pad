@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import {
   createProject,
+  getPlatformPermissionStatuses,
   importArchiveFile,
   loadAppData,
+  revokePlatformPermission,
   updateSettings,
   wipeData,
 } from "lib/appState";
+import type { SupportedPlatform } from "types/archive";
 import type { Settings } from "types/settings";
 
 export default function App() {
@@ -14,12 +17,16 @@ export default function App() {
   const [archiveCount, setArchiveCount] = useState(0);
   const [importStatus, setImportStatus] = useState("");
   const [settingsError, setSettingsError] = useState("");
+  const [permissionStatuses, setPermissionStatuses] = useState<Record<string, boolean>>({});
+
+  const platforms: SupportedPlatform[] = ["chatgpt", "claude", "gemini", "perplexity"];
 
   const refresh = async () => {
     const data = await loadAppData();
     setSettings(data.settings);
     setProjectOptions(data.projects.map((project) => ({ id: project.id, title: project.title })));
     setArchiveCount(data.records.length);
+    setPermissionStatuses(await getPlatformPermissionStatuses(platforms));
   };
 
   useEffect(() => {
@@ -243,25 +250,74 @@ export default function App() {
             </div>
           </div>
           <div className="mini-grid">
-            {(["chatgpt", "claude", "gemini", "perplexity"] as const).map((platform) => (
-              <label key={platform} className="surface">
-                <input
-                  type="checkbox"
-                  checked={settings.enabledPlatforms.includes(platform)}
-                  onChange={async (event) => {
-                    setSettingsError("");
-                    const nextPlatforms = event.target.checked
-                      ? [...settings.enabledPlatforms, platform]
-                      : settings.enabledPlatforms.filter((value) => value !== platform);
-                    const next = await updateSettings({
-                      ...settings,
-                      enabledPlatforms: nextPlatforms,
-                    });
-                    setSettings(next);
-                  }}
-                />{" "}
-                {platform}
-              </label>
+            {platforms.map((platform) => (
+              <div key={platform} className="surface stack">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={settings.enabledPlatforms.includes(platform)}
+                    onChange={async (event) => {
+                      setSettingsError("");
+                      const nextPlatforms = event.target.checked
+                        ? [...settings.enabledPlatforms, platform]
+                        : settings.enabledPlatforms.filter((value) => value !== platform);
+                      const next = await updateSettings({
+                        ...settings,
+                        enabledPlatforms: nextPlatforms,
+                      });
+                      setSettings(next);
+                    }}
+                  />{" "}
+                  {platform}
+                </label>
+                <div className="badge-row">
+                  <span className={`badge ${permissionStatuses[platform] ? "alt" : "warn"}`}>
+                    {permissionStatuses[platform] ? "Access granted" : "Access not granted"}
+                  </span>
+                </div>
+                <div className="toolbar">
+                  <button
+                    className="button-secondary"
+                    onClick={async () => {
+                      try {
+                        setSettingsError("");
+                        const result = await chrome.runtime.sendMessage({
+                          type: "REQUEST_PLATFORM_PERMISSION",
+                          payload: { platform },
+                        });
+                        setSettingsError(result?.reason ?? "");
+                        await refresh();
+                      } catch (value) {
+                        setSettingsError(
+                          value instanceof Error ? value.message : "Unable to request site access.",
+                        );
+                      }
+                    }}
+                  >
+                    Grant Access
+                  </button>
+                  <button
+                    className="button-soft"
+                    disabled={!permissionStatuses[platform]}
+                    onClick={async () => {
+                      try {
+                        setSettingsError("");
+                        await revokePlatformPermission(platform);
+                        await refresh();
+                        setSettingsError(
+                          `Removed persistent site access for ${platform}. Reload any open ${platform} tabs to clear injected UI.`,
+                        );
+                      } catch (value) {
+                        setSettingsError(
+                          value instanceof Error ? value.message : "Unable to remove site access.",
+                        );
+                      }
+                    }}
+                  >
+                    Remove Access
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
           <div className="toolbar">

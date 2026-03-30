@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import { captureCurrentPage, loadAppData, openSidePanel, requestPageStatus } from "lib/appState";
+import {
+  captureCurrentPage,
+  loadAppData,
+  openSidePanel,
+  requestCurrentPlatformPermission,
+  requestPageStatus,
+} from "lib/appState";
 import type { ArchiveRecord } from "types/archive";
 import type { Project } from "types/project";
 
@@ -8,6 +14,7 @@ interface PageStatus {
   supportedUrl?: boolean;
   captureReady?: boolean;
   enabled?: boolean;
+  permissionGranted?: boolean;
   platform?: string;
   title?: string;
   hasSelection?: boolean;
@@ -21,6 +28,7 @@ export default function App() {
   const [onboardingCompleted, setOnboardingCompleted] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [permissionBusy, setPermissionBusy] = useState(false);
 
   const refresh = async () => {
     const [pageStatus, data] = await Promise.all([requestPageStatus(), loadAppData()]);
@@ -91,6 +99,27 @@ export default function App() {
           <button className="button-secondary" onClick={() => void openSidePanel()}>
             Open Side Panel
           </button>
+          {!status.permissionGranted && status.supportedUrl ? (
+            <button
+              className="button-secondary"
+              disabled={permissionBusy}
+              onClick={async () => {
+                setPermissionBusy(true);
+                setError("");
+                try {
+                  const result = await requestCurrentPlatformPermission();
+                  setError(result?.reason ?? "");
+                  await refresh();
+                } catch (value) {
+                  setError(value instanceof Error ? value.message : "Unable to request site access.");
+                } finally {
+                  setPermissionBusy(false);
+                }
+              }}
+            >
+              {permissionBusy ? "Requesting..." : "Grant Site Access"}
+            </button>
+          ) : null}
           <button className="button-soft" onClick={() => void chrome.runtime.openOptionsPage()}>
             Settings
           </button>

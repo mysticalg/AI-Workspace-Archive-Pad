@@ -1,5 +1,12 @@
+import contentScript from "../content/index.tsx?script";
 import type { CaptureDraft } from "types/archive";
 import { parseImportText } from "lib/importers";
+import { cleanTextFromMessages } from "lib/normalize";
+import {
+  getPlatformFromUrl,
+  hasPlatformPermission,
+  requestPlatformPermission,
+} from "lib/permissions";
 import {
   ensureSettings,
   ensureStarterProject,
@@ -8,8 +15,6 @@ import {
   saveSnippet,
   wipeLocalData,
 } from "lib/storage";
-import { cleanTextFromMessages } from "lib/normalize";
-import { getPlatformFromUrl } from "lib/permissions";
 
 type ContentRequest =
   | { type: "GET_PAGE_STATUS" }
@@ -20,6 +25,7 @@ type ContentRequest =
 type RuntimeRequest =
   | { type: "OPEN_SIDE_PANEL_REQUESTED" }
   | { type: "GET_PAGE_STATUS" }
+  | { type: "REQUEST_PLATFORM_PERMISSION"; payload?: { platform?: string } }
   | { type: "CAPTURE_CURRENT_PAGE"; payload?: CapturePayload }
   | { type: "CAPTURE_SELECTION"; payload?: CapturePayload }
   | { type: "CAPTURE_LAST_EXCHANGE"; payload?: CapturePayload }
@@ -37,6 +43,8 @@ type CapturePayload = {
   titleOverride?: string;
 };
 
+const CONTENT_SCRIPT_ID = "aiwa-content-script";
+
 async function getActiveTab() {
   const [tab] = await chrome.tabs.query({
     active: true,
@@ -44,6 +52,48 @@ async function getActiveTab() {
   });
 
   return tab;
+}
+
+async function syncRegisteredContentScripts() {
+  const registrations = await chrome.scripting.getRegisteredContentScripts();
+  const ours = registrations.filter((script) => script.id === CONTENT_SCRIPT_ID);
+  if (ours.length > 0) {
+    await chrome.scripting.unregisterContentScripts({ ids: [CONTENT_SCRIPT_ID] });
+  }
+
+  const grantedOrigins = (
+    await Promise.all(
+      (["chatgpt", "claude", "gemini", "perplexity"] as const).map(async (platform) =>
+        (await hasPlatformPermission(platform)) ? platform : null,
+      ),
+    )
+  )
+    .filter((platform): platform is Exclude<CaptureDraft["platform"], "copilot" | "other"> => Boolean(platform))
+    .flatMap((platform) => {
+      switch (platform) {
+        case "chatgpt":
+          return ["https://chatgpt.com/*"];
+        case "claude":
+          return ["https://claude.ai/*"];
+        case "gemini":
+          return ["https://gemini.google.com/*"];
+        case "perplexity":
+          return ["https://www.perplexity.ai/*"];
+      }
+    });
+
+  if (grantedOrigins.length === 0) {
+    return;
+  }
+
+  await chrome.scripting.registerContentScripts([
+    {
+      id: CONTENT_SCRIPT_ID,
+      js: [contentScript],
+      matches: grantedOrigins,
+      runAt: "document_idle",
+    },
+  ]);
 }
 
 async function askContentScript<T>(message: ContentRequest) {
@@ -63,18 +113,33 @@ async function getPageStatus() {
   const [tab, settings] = await Promise.all([getActiveTab(), ensureSettings()]);
   const url = tab?.url ?? "";
   const platform = getPlatformFromUrl(url);
+  const permissionGranted = platform !== "other" ? await hasPlatformPermission(platform) : false;
 
   if (platform === "other") {
     return {
       supported: false,
       supportedUrl: false,
       captureReady: false,
+      permissionGranted: false,
       title: tab?.title,
       reason: "Open ChatGPT, Claude, Gemini, or Perplexity to capture a visible AI conversation.",
     };
   }
 
   const enabled = settings.enabledPlatforms.includes(platform);
+  if (!permissionGranted) {
+    return {
+      supported: true,
+      supportedUrl: true,
+      captureReady: false,
+      enabled,
+      permissionGranted: false,
+      platform,
+      title: tab?.title,
+      reason: `Grant site access for ${platform} before capture. After granting access, reload the page once to enable the overlay and parser.`,
+    };
+  }
+
   const contentStatus = await askContentScript<{
     supported?: boolean;
     platform?: string;
@@ -88,6 +153,7 @@ async function getPageStatus() {
       supportedUrl: true,
       captureReady: false,
       enabled: false,
+      permissionGranted: true,
       platform,
       title: contentStatus?.title ?? tab?.title,
       reason: `Capture is disabled for ${platform}. Re-enable it in Settings to save this workspace.`,
@@ -101,6 +167,7 @@ async function getPageStatus() {
       supportedUrl: true,
       captureReady: true,
       enabled: true,
+      permissionGranted: true,
       reason: "Ready to capture visible content from this page.",
     };
   }
@@ -110,6 +177,7 @@ async function getPageStatus() {
     supportedUrl: true,
     captureReady: false,
     enabled: true,
+    permissionGranted: true,
     platform,
     title: tab?.title,
     reason:
@@ -149,6 +217,7 @@ async function capture(messageType: ContentRequest["type"], payload: CapturePayl
 chrome.runtime.onInstalled.addListener((details) => {
   void ensureSettings();
   void ensureStarterProject();
+  void syncRegisteredContentScripts();
 
   if (details.reason === "install") {
     chrome.runtime.openOptionsPage().catch(() => undefined);
@@ -158,6 +227,15 @@ chrome.runtime.onInstalled.addListener((details) => {
 chrome.runtime.onStartup.addListener(() => {
   void ensureSettings();
   void ensureStarterProject();
+  void syncRegisteredContentScripts();
+});
+
+chrome.permissions.onAdded.addListener(() => {
+  void syncRegisteredContentScripts();
+});
+
+chrome.permissions.onRemoved.addListener(() => {
+  void syncRegisteredContentScripts();
 });
 
 chrome.runtime.onMessage.addListener((message: RuntimeRequest, _sender, sendResponse) => {
@@ -175,6 +253,31 @@ chrome.runtime.onMessage.addListener((message: RuntimeRequest, _sender, sendResp
       case "GET_PAGE_STATUS": {
         const status = await getPageStatus();
         sendResponse(status);
+        return;
+      }
+
+      case "REQUEST_PLATFORM_PERMISSION": {
+        const tab = await getActiveTab();
+        const platform =
+          message.payload?.platform && message.payload.platform !== "other"
+            ? (message.payload.platform as Exclude<CaptureDraft["platform"], "other">)
+            : getPlatformFromUrl(tab?.url ?? "");
+
+        if (platform === "other") {
+          throw new Error("Open a supported AI workspace before requesting site access.");
+        }
+
+        const granted = await requestPlatformPermission(platform);
+        if (granted) {
+          await syncRegisteredContentScripts();
+        }
+        sendResponse({
+          granted,
+          platform,
+          reason: granted
+            ? `Site access granted for ${platform}. Reload the tab once so the capture overlay can attach.`
+            : `Site access was not granted for ${platform}.`,
+        });
         return;
       }
 
@@ -231,6 +334,7 @@ chrome.runtime.onMessage.addListener((message: RuntimeRequest, _sender, sendResp
 
       case "WIPE_LOCAL_DATA": {
         await wipeLocalData();
+        await syncRegisteredContentScripts();
         sendResponse({ ok: true });
         return;
       }

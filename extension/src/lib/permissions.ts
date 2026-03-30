@@ -43,3 +43,11 @@ export async function hasPlatformPermission(platform: SupportedPlatform) {
   return chrome.permissions.contains({ origins });
 }
 
+export async function removePlatformPermission(platform: SupportedPlatform) {
+  const origins = PLATFORM_HOSTS[platform];
+  if (!origins.length) {
+    return false;
+  }
+
+  return chrome.permissions.remove({ origins });
+}

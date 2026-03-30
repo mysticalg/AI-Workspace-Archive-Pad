@@ -16,6 +16,5 @@ AI Workspace Archive is designed to capture AI workspace content only when the u
 
 ## Permissions
 
-- Host access is limited to supported AI domains.
+- Host access is limited to supported AI domains and can be granted or removed per platform by the user.
 - Storage access is used for project, archive, snippet, and settings persistence.
-

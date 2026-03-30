@@ -14,18 +14,11 @@ export default defineManifest({
   description:
     "Save, organize, search, and export your AI workspace across platforms.",
   permissions: ["storage", "activeTab", "scripting", "sidePanel"],
-  host_permissions: [...SUPPORTED_HOSTS],
+  optional_host_permissions: [...SUPPORTED_HOSTS],
   background: {
     service_worker: "src/background/service-worker.ts",
     type: "module",
   },
-  content_scripts: [
-    {
-      matches: [...SUPPORTED_HOSTS],
-      js: ["src/content/index.tsx"],
-      run_at: "document_idle",
-    },
-  ],
   action: {
     default_popup: "src/popup/index.html",
   },
