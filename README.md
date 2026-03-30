@@ -45,4 +45,4 @@ AI Workspace Archive is a local-first Chrome extension for saving, organizing, s
 - Cloud sync and billing are scaffolded but not yet production-integrated.
 - Generated Chrome Web Store assets are written to `assets/chrome-web-store/`.
 - A Chrome Web Store upload ZIP is written to `artifacts/` by `npm run package:extension`.
-- The website is configured for GitHub Pages deployment from `.github/workflows/deploy-website.yml`.
+- The website includes a manual GitHub Pages workflow in `.github/workflows/deploy-website.yml` for use after Pages is enabled in repo settings.

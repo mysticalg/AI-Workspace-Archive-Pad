@@ -8,7 +8,7 @@ This repo now includes a reproducible asset pack under `assets/chrome-web-store/
 - Small promo tile: `assets/chrome-web-store/small-promo-tile.png`
 - Marquee promo tile: `assets/chrome-web-store/marquee-promo-tile.png`
 - Asset manifest: `assets/chrome-web-store/asset-manifest.json`
-- Hosted site target after GitHub Pages deploy: `https://<owner>.github.io/AI-Workspace-Archive-Pad/`
+- Hosted site target after GitHub Pages is enabled and the manual workflow is run: `https://<owner>.github.io/AI-Workspace-Archive-Pad/`
 
 Run this before refreshing the pack:
 
@@ -131,4 +131,4 @@ If a later release introduces gated cloud features, add reviewer credentials in 
 - Re-run `npm run assets:store`
 - Rebuild the upload ZIP with `npm run package:extension`
 - Re-check dashboard privacy answers against the latest extension package
-- After Pages deployment, use `/privacy.html` as the privacy-policy URL and `/support.html` as the support URL
+- After Pages is enabled and the workflow is run, use `/privacy.html` as the privacy-policy URL and `/support.html` as the support URL
