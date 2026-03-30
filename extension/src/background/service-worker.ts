@@ -1,13 +1,15 @@
 import type { CaptureDraft } from "types/archive";
+import { parseImportText } from "lib/importers";
 import {
   ensureSettings,
   ensureStarterProject,
-  importNormalizedJson,
+  mergeImportBundle,
   saveArchiveRecord,
   saveSnippet,
   wipeLocalData,
 } from "lib/storage";
 import { cleanTextFromMessages } from "lib/normalize";
+import { getPlatformFromUrl } from "lib/permissions";
 
 type ContentRequest =
   | { type: "GET_PAGE_STATUS" }
@@ -50,7 +52,69 @@ async function askContentScript<T>(message: ContentRequest) {
     return null;
   }
 
-  return chrome.tabs.sendMessage(tab.id, message) as Promise<T | null>;
+  try {
+    return (await chrome.tabs.sendMessage(tab.id, message)) as T | null;
+  } catch {
+    return null;
+  }
+}
+
+async function getPageStatus() {
+  const [tab, settings] = await Promise.all([getActiveTab(), ensureSettings()]);
+  const url = tab?.url ?? "";
+  const platform = getPlatformFromUrl(url);
+
+  if (platform === "other") {
+    return {
+      supported: false,
+      supportedUrl: false,
+      captureReady: false,
+      title: tab?.title,
+      reason: "Open ChatGPT, Claude, Gemini, or Perplexity to capture a visible AI conversation.",
+    };
+  }
+
+  const enabled = settings.enabledPlatforms.includes(platform);
+  const contentStatus = await askContentScript<{
+    supported?: boolean;
+    platform?: string;
+    title?: string;
+    hasSelection?: boolean;
+  }>({ type: "GET_PAGE_STATUS" });
+
+  if (!enabled) {
+    return {
+      supported: true,
+      supportedUrl: true,
+      captureReady: false,
+      enabled: false,
+      platform,
+      title: contentStatus?.title ?? tab?.title,
+      reason: `Capture is disabled for ${platform}. Re-enable it in Settings to save this workspace.`,
+    };
+  }
+
+  if (contentStatus?.supported) {
+    return {
+      ...contentStatus,
+      supported: true,
+      supportedUrl: true,
+      captureReady: true,
+      enabled: true,
+      reason: "Ready to capture visible content from this page.",
+    };
+  }
+
+  return {
+    supported: true,
+    supportedUrl: true,
+    captureReady: false,
+    enabled: true,
+    platform,
+    title: tab?.title,
+    reason:
+      "This is a supported site, but capture is not ready yet. Reload the page if you just installed or updated the extension.",
+  };
 }
 
 async function resolveProjectId(projectId?: string) {
@@ -65,7 +129,8 @@ async function resolveProjectId(projectId?: string) {
 async function capture(messageType: ContentRequest["type"], payload: CapturePayload = {}) {
   const draft = await askContentScript<CaptureDraft>({ type: messageType });
   if (!draft) {
-    throw new Error("Unsupported page or capture unavailable");
+    const status = await getPageStatus();
+    throw new Error(status.reason ?? "Capture is unavailable on this page.");
   }
 
   const settings = await ensureSettings();
@@ -108,7 +173,7 @@ chrome.runtime.onMessage.addListener((message: RuntimeRequest, _sender, sendResp
       }
 
       case "GET_PAGE_STATUS": {
-        const status = await askContentScript({ type: "GET_PAGE_STATUS" });
+        const status = await getPageStatus();
         sendResponse(status);
         return;
       }
@@ -147,7 +212,8 @@ chrome.runtime.onMessage.addListener((message: RuntimeRequest, _sender, sendResp
             : await askContentScript<CaptureDraft>({ type: "PARSE_SELECTION" });
 
         if (!selectionDraft) {
-          throw new Error("Nothing selected to save");
+          const status = await getPageStatus();
+          throw new Error(status.captureReady ? "Nothing selected to save." : status.reason ?? "Nothing selected to save.");
         }
 
         const snippet = await saveSnippet({
@@ -170,7 +236,8 @@ chrome.runtime.onMessage.addListener((message: RuntimeRequest, _sender, sendResp
       }
 
       case "IMPORT_FILE": {
-        await importNormalizedJson(message.payload.text);
+        const bundle = await parseImportText(message.payload.text);
+        await mergeImportBundle(bundle);
         sendResponse({ ok: true });
         return;
       }

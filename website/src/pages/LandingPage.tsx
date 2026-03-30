@@ -47,7 +47,7 @@ export function LandingPage() {
         </div>
         <div className="pricing-card featured">
           <h3>Pro</h3>
-          <p>£4.99/month or £39/year for unlimited projects, sync, DOCX, batch export, and prompt library.</p>
+          <p>GBP 4.99/month or GBP 39/year for unlimited projects, sync, DOCX, batch export, and prompt library.</p>
         </div>
         <div className="pricing-card">
           <h3>Team</h3>
@@ -57,4 +57,3 @@ export function LandingPage() {
     </main>
   );
 }
-

@@ -20,6 +20,7 @@ export function SavePanel({
   const [tags, setTags] = useState("");
   const [notes, setNotes] = useState("");
   const [busyMode, setBusyMode] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState("");
 
   const payload = {
     projectId: selectedProjectId,
@@ -33,8 +34,12 @@ export function SavePanel({
   const handleSave = async (mode: "current" | "selection" | "exchange") => {
     setBusyMode(mode);
     try {
+      setStatusMessage("");
       await onSave(mode, payload);
       setNotes("");
+      setStatusMessage("Capture saved.");
+    } catch (value) {
+      setStatusMessage(value instanceof Error ? value.message : "Capture failed.");
     } finally {
       setBusyMode(null);
     }
@@ -98,7 +103,7 @@ export function SavePanel({
           {busyMode === "exchange" ? "Saving..." : "Save Last Exchange"}
         </button>
       </div>
+      {statusMessage ? <div className="muted">{statusMessage}</div> : null}
     </div>
   );
 }
-

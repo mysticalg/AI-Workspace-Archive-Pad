@@ -1,16 +1,25 @@
 import { useEffect, useState } from "react";
-import { createProject, importJsonFile, loadAppData, updateSettings, wipeData } from "lib/appState";
+import {
+  createProject,
+  importArchiveFile,
+  loadAppData,
+  updateSettings,
+  wipeData,
+} from "lib/appState";
 import type { Settings } from "types/settings";
 
 export default function App() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [projectOptions, setProjectOptions] = useState<Array<{ id: string; title: string }>>([]);
+  const [archiveCount, setArchiveCount] = useState(0);
   const [importStatus, setImportStatus] = useState("");
+  const [settingsError, setSettingsError] = useState("");
 
   const refresh = async () => {
     const data = await loadAppData();
     setSettings(data.settings);
     setProjectOptions(data.projects.map((project) => ({ id: project.id, title: project.title })));
+    setArchiveCount(data.records.length);
   };
 
   useEffect(() => {
@@ -34,7 +43,61 @@ export default function App() {
             <span className="badge alt">{settings.billing.tier}</span>
           </div>
         </div>
+        <div className="hero-grid">
+          <div className="stat">
+            <div className="stat-label">Storage Mode</div>
+            <div className="stat-value">{settings.storageMode}</div>
+          </div>
+          <div className="stat">
+            <div className="stat-label">Projects</div>
+            <div className="stat-value">{projectOptions.length}</div>
+          </div>
+          <div className="stat">
+            <div className="stat-label">Archive Records</div>
+            <div className="stat-value">{archiveCount}</div>
+          </div>
+        </div>
       </section>
+
+      {!settings.onboardingCompleted ? (
+        <section className="section-card">
+          <div className="section-header">
+            <div>
+              <h3>First-Run Onboarding</h3>
+              <div className="muted">Make the extension behavior explicit before you rely on it.</div>
+            </div>
+            <span className="badge warn">Setup in progress</span>
+          </div>
+          <div className="list">
+            <div className="list-item">
+              <div className="list-item-title">1. Confirm storage mode</div>
+              <div className="muted">Local-only is the default and keeps archive data on-device.</div>
+            </div>
+            <div className="list-item">
+              <div className="list-item-title">2. Choose the AI sites you want enabled</div>
+              <div className="muted">Disable any supported platform you do not want the extension to operate on.</div>
+            </div>
+            <div className="list-item">
+              <div className="list-item-title">3. Save the first visible conversation</div>
+              <div className="muted">On first successful capture, onboarding completes automatically.</div>
+            </div>
+          </div>
+          <div className="toolbar">
+            <button
+              className="button-primary"
+              onClick={async () => {
+                const next = await updateSettings({
+                  ...settings,
+                  onboardingCompleted: true,
+                });
+                setSettings(next);
+              }}
+            >
+              Mark Onboarding Complete
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       <div className="two-column">
         <section className="section-card">
@@ -52,6 +115,7 @@ export default function App() {
                 id="storage-mode"
                 value={settings.storageMode}
                 onChange={async (event) => {
+                  setSettingsError("");
                   const next = await updateSettings({
                     ...settings,
                     storageMode: event.target.value as Settings["storageMode"],
@@ -70,6 +134,7 @@ export default function App() {
                 id="default-project"
                 value={settings.defaultProjectId ?? ""}
                 onChange={async (event) => {
+                  setSettingsError("");
                   const next = await updateSettings({
                     ...settings,
                     defaultProjectId: event.target.value,
@@ -91,6 +156,7 @@ export default function App() {
                 id="billing-tier"
                 value={settings.billing.tier}
                 onChange={async (event) => {
+                  setSettingsError("");
                   const next = await updateSettings({
                     ...settings,
                     billing: {
@@ -173,7 +239,7 @@ export default function App() {
           <div className="section-header">
             <div>
               <h3>Platform Controls</h3>
-              <div className="muted">Application-level enablement for supported AI workspaces.</div>
+              <div className="muted">Supported AI workspaces are controlled here and captured only after user action.</div>
             </div>
           </div>
           <div className="mini-grid">
@@ -183,6 +249,7 @@ export default function App() {
                   type="checkbox"
                   checked={settings.enabledPlatforms.includes(platform)}
                   onChange={async (event) => {
+                    setSettingsError("");
                     const nextPlatforms = event.target.checked
                       ? [...settings.enabledPlatforms, platform]
                       : settings.enabledPlatforms.filter((value) => value !== platform);
@@ -201,15 +268,48 @@ export default function App() {
             <button
               className="button-secondary"
               onClick={async () => {
-                await createProject("Imported Archive");
-                await refresh();
+                try {
+                  setSettingsError("");
+                  await createProject("Imported Archive");
+                  await refresh();
+                } catch (value) {
+                  setSettingsError(value instanceof Error ? value.message : "Unable to create project.");
+                }
               }}
             >
               Create Import Project
             </button>
           </div>
+          <div className="muted">
+            Enabled platforms show the capture overlay on supported AI sites. Disable any platform you do not want to use.
+          </div>
         </section>
       </div>
+
+      {settingsError ? <div className="section-card muted">{settingsError}</div> : null}
+
+      <section className="section-card">
+        <div className="section-header">
+          <div>
+            <h3>Capture Disclosure</h3>
+            <div className="muted">Plain-language explanation for users and Chrome Web Store review.</div>
+          </div>
+        </div>
+        <div className="mini-grid">
+          <div className="surface">
+            <strong>Captured when you click save</strong>
+            <div className="muted">Visible chat messages, code blocks, links, tables, timestamps, URL, and model labels when present.</div>
+          </div>
+          <div className="surface">
+            <strong>Not captured</strong>
+            <div className="muted">Unrelated browsing activity, keystrokes, hidden page content, or continuous background recording.</div>
+          </div>
+          <div className="surface">
+            <strong>Deletion controls</strong>
+            <div className="muted">You can remove individual records in the side panel or wipe the entire local archive below.</div>
+          </div>
+        </div>
+      </section>
 
       <section className="section-card">
         <div className="section-header">
@@ -220,20 +320,27 @@ export default function App() {
         </div>
 
         <div className="field">
-          <label htmlFor="import-json">Import normalized JSON archive</label>
+          <label htmlFor="import-json">Import normalized JSON or ChatGPT export ZIP/JSON</label>
           <input
             id="import-json"
             type="file"
-            accept=".json"
+            accept=".json,.zip"
             onChange={async (event) => {
               const file = event.target.files?.[0];
               if (!file) {
                 return;
               }
               setImportStatus("Importing...");
-              const text = await file.text();
-              await importJsonFile(text);
-              setImportStatus("Import complete");
+              try {
+                const result = await importArchiveFile(file);
+                const warningText =
+                  result.warnings.length > 0 ? ` Warnings: ${result.warnings.join(" ")}` : "";
+                setImportStatus(
+                  `Imported ${result.importedProjects} projects, ${result.importedRecords} records, and ${result.importedSnippets} snippets from ${result.source}.${warningText}`,
+                );
+              } catch (value) {
+                setImportStatus(value instanceof Error ? value.message : "Import failed.");
+              }
               await refresh();
             }}
           />
@@ -267,7 +374,7 @@ export default function App() {
           </div>
           <div className="pricing-card">
             <h3>Pro</h3>
-            <p className="muted">£4.99/month or £39/year. Unlimited projects, sync, DOCX, batch export, prompt library.</p>
+            <p className="muted">GBP 4.99/month or GBP 39/year. Unlimited projects, sync, DOCX, batch export, prompt library.</p>
           </div>
           <div className="pricing-card">
             <h3>Team</h3>

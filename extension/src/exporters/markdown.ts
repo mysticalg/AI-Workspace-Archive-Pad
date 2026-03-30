@@ -57,10 +57,9 @@ export function archiveRecordToMarkdown(
   const body = record.messages
     .map((message, index) => {
       const blocks = message.contentBlocks.map(renderBlock).join("\n\n");
-      return `## Turn ${index + 1} · ${message.role}\n\n${blocks}`;
+      return `## Turn ${index + 1} - ${message.role}\n\n${blocks}`;
     })
     .join("\n\n");
 
   return `${frontmatter}${header}${body}\n`;
 }
-

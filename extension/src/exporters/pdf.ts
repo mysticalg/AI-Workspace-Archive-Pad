@@ -80,7 +80,7 @@ export async function archiveRecordToPdfBlob(
       y = margin;
     }
 
-    writeText(`Turn ${index + 1} · ${message.role}`, 13, "helvetica", "bold");
+    writeText(`Turn ${index + 1} - ${message.role}`, 13, "helvetica", "bold");
     writeText(message.contentBlocks.map(renderBlock).join("\n\n"), 11);
   });
 

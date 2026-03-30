@@ -24,7 +24,7 @@ function buildTimeline(project: Project | undefined, records: ArchiveRecord[]) {
   const exportEvents =
     project?.exportHistory.map((entry) => ({
       id: entry.id,
-      title: `Project export · ${entry.format.toUpperCase()}`,
+      title: `Project export - ${entry.format.toUpperCase()}`,
       description: `${entry.recordIds.length} records`,
       createdAt: entry.createdAt,
     })) ?? [];
@@ -32,7 +32,7 @@ function buildTimeline(project: Project | undefined, records: ArchiveRecord[]) {
   const recordEvents = records.map((record) => ({
     id: record.id,
     title: record.sourceTitle ?? "Untitled capture",
-    description: `${record.platform} · ${record.modelName ?? "Model unknown"}`,
+    description: `${record.platform} - ${record.modelName ?? "Model unknown"}`,
     createdAt: record.capturedAt,
   }));
 
@@ -118,6 +118,18 @@ export default function App() {
         </div>
       </section>
 
+      {!settings?.onboardingCompleted ? (
+        <section className="section-card">
+          <div className="section-header">
+            <div>
+              <h3>First Capture Checklist</h3>
+              <div className="muted">Choose a project, save a visible conversation, and verify the archive item below.</div>
+            </div>
+            <span className="badge warn">Onboarding</span>
+          </div>
+        </section>
+      ) : null}
+
       <ProjectSelector
         projects={projects}
         selectedProjectId={selectedProjectId}
@@ -143,6 +155,25 @@ export default function App() {
           }
         />
       </div>
+
+      <section className="section-card">
+        <div className="section-header">
+          <div>
+            <h3>Capture Boundaries</h3>
+            <div className="muted">The extension only saves visible AI workspace content after you trigger capture.</div>
+          </div>
+        </div>
+        <div className="mini-grid">
+          <div className="surface">
+            <strong>Included</strong>
+            <div className="muted">Visible messages, notes, tags, links, code blocks, URLs, and export history.</div>
+          </div>
+          <div className="surface">
+            <strong>Excluded</strong>
+            <div className="muted">Unrelated browsing, hidden background activity, keystrokes, and non-supported sites.</div>
+          </div>
+        </div>
+      </section>
 
       <RecentCaptures
         records={projectRecords.slice(0, 12)}
@@ -202,4 +233,3 @@ export default function App() {
     </div>
   );
 }
-

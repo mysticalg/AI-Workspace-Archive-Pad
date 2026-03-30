@@ -1,9 +1,11 @@
 import { db } from "db/dexie";
+import { parseImportFile } from "lib/importers";
 import { searchArchive } from "lib/search";
 import {
   canCreateMoreProjects,
   ensureSettings,
   getAppState,
+  mergeImportBundle,
   markExport,
   upsertProject,
 } from "lib/storage";
@@ -109,6 +111,11 @@ export async function importJsonFile(text: string) {
     type: "IMPORT_FILE",
     payload: { text },
   });
+}
+
+export async function importArchiveFile(file: File) {
+  const bundle = await parseImportFile(file);
+  return mergeImportBundle(bundle);
 }
 
 async function resolveRecordBlob(record: ArchiveRecord, format: Exclude<ExportFormat, "zip">) {

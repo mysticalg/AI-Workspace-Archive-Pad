@@ -40,7 +40,7 @@ export function ProjectSelector({
           >
             {projects.map((project) => (
               <option key={project.id} value={project.id}>
-                {project.title} · {project.status}
+                {project.title} - {project.status}
               </option>
             ))}
           </select>

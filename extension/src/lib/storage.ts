@@ -2,6 +2,7 @@ import { db } from "db/dexie";
 import { createDedupeHash } from "lib/dedupe";
 import { cleanTextFromMessages, summarizeRecord } from "lib/normalize";
 import { hasPro } from "lib/featureFlags";
+import type { ImportBundle } from "lib/importers";
 import type { ArchiveRecord, CaptureDraft } from "types/archive";
 import type { Project } from "types/project";
 import type { Settings } from "types/settings";
@@ -128,6 +129,14 @@ export async function saveArchiveRecord(
   };
 
   await db.archiveRecords.add(record);
+
+  const settings = await ensureSettings();
+  if (!settings.onboardingCompleted) {
+    await db.settings.put({
+      ...settings,
+      onboardingCompleted: true,
+    });
+  }
 
   if (record.projectId) {
     const project = await db.projects.get(record.projectId);
@@ -269,6 +278,79 @@ export async function importNormalizedJson(text: string) {
       }
     },
   );
+}
+
+export async function mergeImportBundle(bundle: ImportBundle) {
+  let importedProjects = 0;
+  let importedRecords = 0;
+  let importedSnippets = 0;
+
+  await db.transaction(
+    "rw",
+    db.projects,
+    db.archiveRecords,
+    db.snippets,
+    async () => {
+      for (const project of bundle.projects) {
+        const exists = await db.projects.get(project.id);
+        await db.projects.put(project);
+        if (!exists) {
+          importedProjects += 1;
+        }
+      }
+
+      for (const record of bundle.records) {
+        const cleanText = record.cleanText || cleanTextFromMessages(record.messages);
+        const dedupeHash =
+          record.dedupeHash ||
+          (await createDedupeHash({
+            platform: record.platform,
+            sourceUrl: record.sourceUrl,
+            sourceTitle: record.sourceTitle,
+            modelName: record.modelName,
+            cleanText,
+          }));
+        const duplicate = await db.archiveRecords.where("dedupeHash").equals(dedupeHash).first();
+        if (duplicate) {
+          continue;
+        }
+
+        await db.archiveRecords.put({
+          ...record,
+          id: record.id || uid("record"),
+          dedupeHash,
+          cleanText,
+          summary: record.summary ?? summarizeRecord({ cleanText }),
+          attachments: record.attachments ?? [],
+          tags: record.tags ?? [],
+          exportCount: record.exportCount ?? 0,
+          exportHistory: record.exportHistory ?? [],
+        });
+        importedRecords += 1;
+      }
+
+      for (const snippet of bundle.snippets) {
+        const exists = await db.snippets.get(snippet.id);
+        await db.snippets.put({
+          ...snippet,
+          id: snippet.id || uid("snippet"),
+          tags: snippet.tags ?? [],
+          createdAt: snippet.createdAt || new Date().toISOString(),
+        });
+        if (!exists) {
+          importedSnippets += 1;
+        }
+      }
+    },
+  );
+
+  return {
+    source: bundle.source,
+    importedProjects,
+    importedRecords,
+    importedSnippets,
+    warnings: bundle.warnings,
+  };
 }
 
 export async function canCreateMoreProjects() {

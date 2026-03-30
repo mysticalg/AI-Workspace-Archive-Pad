@@ -73,7 +73,7 @@ export async function archiveRecordToDocxBlob(record: ArchiveRecord, project?: P
           metadataTable,
           ...record.messages.flatMap((message, index) => [
             new Paragraph({
-              text: `Turn ${index + 1} · ${message.role}`,
+              text: `Turn ${index + 1} - ${message.role}`,
               heading: HeadingLevel.HEADING_2,
             }),
             ...message.contentBlocks.map(paragraphFromBlock),
@@ -85,4 +85,3 @@ export async function archiveRecordToDocxBlob(record: ArchiveRecord, project?: P
 
   return Packer.toBlob(document);
 }
-

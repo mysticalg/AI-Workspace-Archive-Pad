@@ -5,22 +5,29 @@ import type { Project } from "types/project";
 
 interface PageStatus {
   supported?: boolean;
+  supportedUrl?: boolean;
+  captureReady?: boolean;
+  enabled?: boolean;
   platform?: string;
   title?: string;
   hasSelection?: boolean;
+  reason?: string;
 }
 
 export default function App() {
   const [status, setStatus] = useState<PageStatus>({});
   const [projects, setProjects] = useState<Project[]>([]);
   const [records, setRecords] = useState<ArchiveRecord[]>([]);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   const refresh = async () => {
     const [pageStatus, data] = await Promise.all([requestPageStatus(), loadAppData()]);
     setStatus(pageStatus ?? {});
     setProjects(data.projects);
     setRecords(data.records.slice(0, 4));
+    setOnboardingCompleted(data.settings.onboardingCompleted);
   };
 
   useEffect(() => {
@@ -65,12 +72,15 @@ export default function App() {
         <div className="toolbar">
           <button
             className="button-primary"
-            disabled={!status.supported || busy}
+            disabled={!status.captureReady || busy}
             onClick={async () => {
               setBusy(true);
+              setError("");
               try {
                 await captureCurrentPage({ tags: [] });
                 await refresh();
+              } catch (value) {
+                setError(value instanceof Error ? value.message : "Capture failed.");
               } finally {
                 setBusy(false);
               }
@@ -84,6 +94,51 @@ export default function App() {
           <button className="button-soft" onClick={() => void chrome.runtime.openOptionsPage()}>
             Settings
           </button>
+        </div>
+        <div className="muted">{error || status.reason}</div>
+      </section>
+
+      {!onboardingCompleted ? (
+        <section className="section-card">
+          <div className="section-header">
+            <div>
+              <h3>First Capture Checklist</h3>
+              <div className="muted">Keep the first run explicit and review-friendly.</div>
+            </div>
+          </div>
+          <div className="list">
+            <div className="list-item">
+              <div className="list-item-title">1. Open a supported AI workspace.</div>
+              <div className="muted">ChatGPT, Claude, Gemini, or Perplexity in the current tab.</div>
+            </div>
+            <div className="list-item">
+              <div className="list-item-title">2. Save only visible content.</div>
+              <div className="muted">The extension captures visible conversation content after you click save.</div>
+            </div>
+            <div className="list-item">
+              <div className="list-item-title">3. Review storage and privacy settings.</div>
+              <div className="muted">Local-only mode is the default. You can wipe the archive from Settings at any time.</div>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      <section className="section-card">
+        <div className="section-header">
+          <div>
+            <h3>Capture Disclosure</h3>
+            <div className="muted">Exactly what this extension does and does not collect.</div>
+          </div>
+        </div>
+        <div className="list">
+          <div className="list-item">
+            <div className="list-item-title">Captured after you click save</div>
+            <div className="muted">Visible messages, code blocks, links, tables, page URL, timestamps, and model labels when present.</div>
+          </div>
+          <div className="list-item">
+            <div className="list-item-title">Never captured</div>
+            <div className="muted">Unrelated tabs, hidden browsing history, keystrokes, or continuous background activity.</div>
+          </div>
         </div>
       </section>
 
@@ -109,4 +164,3 @@ export default function App() {
     </div>
   );
 }
-
