@@ -20,6 +20,7 @@
 - Run `npm run assets:store`
 - Review `docs/chrome-web-store-submission.md`
 - Deploy the website so `privacy.html` and `support.html` are publicly reachable
+- Confirm the GitHub Pages workflow succeeded and note the final public URLs
 - Review privacy policy against actual shipped behavior
 - Re-check permissions and disclosures before submission
 - Publish a real privacy policy URL and support URL before store submission
