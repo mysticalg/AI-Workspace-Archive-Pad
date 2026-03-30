@@ -1,0 +1,19 @@
+{
+  "name": "ai-workspace-archive-pad",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "extension",
+    "backend",
+    "website"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "lint": "npm run lint --workspaces --if-present",
+    "check": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "typescript": "^6.0.2"
+  }
+}

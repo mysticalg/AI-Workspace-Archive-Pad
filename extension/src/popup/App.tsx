@@ -1,0 +1,112 @@
+import { useEffect, useState } from "react";
+import { captureCurrentPage, loadAppData, openSidePanel, requestPageStatus } from "lib/appState";
+import type { ArchiveRecord } from "types/archive";
+import type { Project } from "types/project";
+
+interface PageStatus {
+  supported?: boolean;
+  platform?: string;
+  title?: string;
+  hasSelection?: boolean;
+}
+
+export default function App() {
+  const [status, setStatus] = useState<PageStatus>({});
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [records, setRecords] = useState<ArchiveRecord[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  const refresh = async () => {
+    const [pageStatus, data] = await Promise.all([requestPageStatus(), loadAppData()]);
+    setStatus(pageStatus ?? {});
+    setProjects(data.projects);
+    setRecords(data.records.slice(0, 4));
+  };
+
+  useEffect(() => {
+    void refresh();
+  }, []);
+
+  return (
+    <div className="app-shell" style={{ minWidth: 380 }}>
+      <section className="hero">
+        <div className="hero-copy">
+          <div>
+            <div className="hero-kicker">PRIVACY-FIRST AI WORKSPACE</div>
+            <h1>Capture once. Organize cleanly. Export anywhere.</h1>
+          </div>
+          <span className="badge">{status.supported ? "Supported page" : "Unavailable"}</span>
+        </div>
+        <div className="hero-grid">
+          <div className="stat">
+            <div className="stat-label">Current Page</div>
+            <div className="stat-value">{status.platform ?? "Unknown"}</div>
+          </div>
+          <div className="stat">
+            <div className="stat-label">Projects</div>
+            <div className="stat-value">{projects.length}</div>
+          </div>
+          <div className="stat">
+            <div className="stat-label">Archive Items</div>
+            <div className="stat-value">{records.length}</div>
+          </div>
+        </div>
+      </section>
+
+      <section className="section-card">
+        <div className="section-header">
+          <div>
+            <h3>Quick Save</h3>
+            <div className="muted">
+              {status.title ?? "Open a supported AI workspace to capture the visible thread."}
+            </div>
+          </div>
+        </div>
+        <div className="toolbar">
+          <button
+            className="button-primary"
+            disabled={!status.supported || busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await captureCurrentPage({ tags: [] });
+                await refresh();
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            {busy ? "Saving..." : "Save Current Chat"}
+          </button>
+          <button className="button-secondary" onClick={() => void openSidePanel()}>
+            Open Side Panel
+          </button>
+          <button className="button-soft" onClick={() => void chrome.runtime.openOptionsPage()}>
+            Settings
+          </button>
+        </div>
+      </section>
+
+      <section className="section-card">
+        <div className="section-header">
+          <div>
+            <h3>Recent Captures</h3>
+            <div className="muted">Latest saved conversations and snippets.</div>
+          </div>
+        </div>
+        <div className="list">
+          {records.map((record) => (
+            <div key={record.id} className="list-item">
+              <div className="list-item-title">{record.sourceTitle ?? "Untitled capture"}</div>
+              <div className="list-item-meta">
+                <span>{record.platform}</span>
+                <span>{new Date(record.capturedAt).toLocaleString()}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
