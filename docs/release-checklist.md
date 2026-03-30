@@ -6,6 +6,7 @@
 - Review first-run onboarding and popup messaging on a clean Chrome profile.
 - Confirm exports open cleanly in Markdown viewers, PDF readers, and Word.
 - Run `npm run qa:extension` and review the generated artifacts under `output/playwright/`.
+- Package the upload bundle with `npm run package:extension`
 
 ## Quality
 
@@ -18,6 +19,7 @@
 
 - Run `npm run assets:store`
 - Review `docs/chrome-web-store-submission.md`
+- Deploy the website so `privacy.html` and `support.html` are publicly reachable
 - Review privacy policy against actual shipped behavior
 - Re-check permissions and disclosures before submission
 - Publish a real privacy policy URL and support URL before store submission

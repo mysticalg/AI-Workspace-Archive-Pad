@@ -15,6 +15,7 @@ Run this before refreshing the pack:
 2. `npm run test`
 3. `npm run qa:extension`
 4. `npm run assets:store`
+5. `npm run package:extension`
 
 ## Suggested listing metadata
 
@@ -127,4 +128,5 @@ If a later release introduces gated cloud features, add reviewer credentials in 
 - Add a real support URL in the developer dashboard
 - Re-run `npm run qa:extension`
 - Re-run `npm run assets:store`
+- Rebuild the upload ZIP with `npm run package:extension`
 - Re-check dashboard privacy answers against the latest extension package

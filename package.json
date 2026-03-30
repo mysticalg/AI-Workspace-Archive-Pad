@@ -10,6 +10,7 @@
   "scripts": {
     "build": "npm run build --workspaces",
     "assets:store": "node scripts/generate-store-assets.cjs",
+    "package:extension": "node scripts/package-extension.cjs",
     "qa:extension": "node scripts/qa-extension.cjs",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
