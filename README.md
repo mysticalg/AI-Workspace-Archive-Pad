@@ -32,10 +32,19 @@ AI Workspace Archive is a local-first Chrome extension for saving, organizing, s
 - `npm run assets:store`
 - `npm run package:extension`
 - `npm run qa:extension`
+- `npm run qa:live-parsers`
 - `npm run test -w extension`
 - `npm run typecheck -w extension`
 - `npm run dev -w website`
 - `npm run dev -w backend`
+
+Live parser QA environment overrides:
+
+- `AIWA_CHROME_PROFILE=Profile 5` to target a non-default Chrome profile
+- `AIWA_QA_SNAPSHOT_ROOT=D:\aiwa-temp` to place the copied profile snapshot on a drive with more free space
+- `AIWA_QA_INCLUDE_INDEXEDDB=1` to include IndexedDB-backed app state
+- `AIWA_QA_INCLUDE_SERVICE_WORKER=1` to include service-worker storage when a platform depends on it
+- `AIWA_QA_HEADLESS=1` to run the probe without opening visible Chrome windows
 
 ## Notes
 
@@ -45,4 +54,5 @@ AI Workspace Archive is a local-first Chrome extension for saving, organizing, s
 - Cloud sync and billing are scaffolded but not yet production-integrated.
 - Generated Chrome Web Store assets are written to `assets/chrome-web-store/`.
 - A Chrome Web Store upload ZIP is written to `artifacts/` by `npm run package:extension`.
+- `npm run qa:live-parsers` uses a copied local Chrome profile snapshot and writes screenshots plus a JSON report under `output/playwright/`.
 - The website includes a manual GitHub Pages workflow in `.github/workflows/deploy-website.yml` for use after Pages is enabled in repo settings.

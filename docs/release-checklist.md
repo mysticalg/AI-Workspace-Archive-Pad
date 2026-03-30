@@ -2,7 +2,7 @@
 
 ## Product
 
-- Validate live capture on current ChatGPT, Claude, Gemini, and Perplexity DOMs.
+- Run `npm run qa:live-parsers` and review the signed-in DOM report for ChatGPT, Claude, Gemini, and Perplexity.
 - Review first-run onboarding and popup messaging on a clean Chrome profile.
 - Confirm exports open cleanly in Markdown viewers, PDF readers, and Word.
 - Run `npm run qa:extension` and review the generated artifacts under `output/playwright/`.

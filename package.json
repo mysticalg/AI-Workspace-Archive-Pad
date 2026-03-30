@@ -12,6 +12,7 @@
     "assets:store": "node scripts/generate-store-assets.cjs",
     "package:extension": "node scripts/package-extension.cjs",
     "qa:extension": "node scripts/qa-extension.cjs",
+    "qa:live-parsers": "node scripts/live-parser-qa.cjs",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "check": "npm run typecheck --workspaces --if-present"
