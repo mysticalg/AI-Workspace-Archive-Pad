@@ -10,6 +10,7 @@ import {
   loadAppData,
   searchRecords,
 } from "lib/appState";
+import { isDemoMode, seedDemoWorkspace } from "lib/demo";
 import type { ArchiveRecord } from "types/archive";
 import type { Project } from "types/project";
 import type { Settings } from "types/settings";
@@ -40,13 +41,19 @@ function buildTimeline(project: Project | undefined, records: ArchiveRecord[]) {
 }
 
 export default function App() {
+  const demoMode = isDemoMode();
   const [projects, setProjects] = useState<Project[]>([]);
   const [records, setRecords] = useState<ArchiveRecord[]>([]);
   const [searchResults, setSearchResults] = useState<ArchiveRecord[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string>();
+  const [ready, setReady] = useState(false);
 
   const refresh = async () => {
+    if (demoMode) {
+      await seedDemoWorkspace();
+    }
+
     const data = await loadAppData();
     setProjects(data.projects);
     setRecords(data.records);
@@ -56,8 +63,13 @@ export default function App() {
   };
 
   useEffect(() => {
-    void refresh();
-  }, []);
+    void refresh().finally(() => setReady(true));
+  }, [demoMode]);
+
+  useEffect(() => {
+    document.body.dataset.demoMode = demoMode ? "true" : "false";
+    document.body.dataset.ready = ready ? "true" : "false";
+  }, [demoMode, ready]);
 
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === selectedProjectId),
@@ -74,6 +86,10 @@ export default function App() {
     () => buildTimeline(selectedProject, projectRecords),
     [projectRecords, selectedProject],
   );
+
+  if (!ready) {
+    return null;
+  }
 
   const handleSave = async (
     mode: SaveMode,

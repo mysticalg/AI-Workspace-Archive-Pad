@@ -6,6 +6,7 @@ import {
   requestCurrentPlatformPermission,
   requestPageStatus,
 } from "lib/appState";
+import { getDemoPageStatus, isDemoMode, seedDemoWorkspace } from "lib/demo";
 import type { ArchiveRecord } from "types/archive";
 import type { Project } from "types/project";
 
@@ -22,6 +23,7 @@ interface PageStatus {
 }
 
 export default function App() {
+  const demoMode = isDemoMode();
   const [status, setStatus] = useState<PageStatus>({});
   const [projects, setProjects] = useState<Project[]>([]);
   const [records, setRecords] = useState<ArchiveRecord[]>([]);
@@ -29,9 +31,17 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [permissionBusy, setPermissionBusy] = useState(false);
+  const [ready, setReady] = useState(false);
 
   const refresh = async () => {
-    const [pageStatus, data] = await Promise.all([requestPageStatus(), loadAppData()]);
+    if (demoMode) {
+      await seedDemoWorkspace();
+    }
+
+    const [pageStatus, data] = await Promise.all([
+      demoMode ? Promise.resolve(getDemoPageStatus()) : requestPageStatus(),
+      loadAppData(),
+    ]);
     setStatus(pageStatus ?? {});
     setProjects(data.projects);
     setRecords(data.records.slice(0, 4));
@@ -39,11 +49,23 @@ export default function App() {
   };
 
   useEffect(() => {
-    void refresh();
-  }, []);
+    void refresh().finally(() => setReady(true));
+  }, [demoMode]);
+
+  useEffect(() => {
+    document.body.dataset.demoMode = demoMode ? "true" : "false";
+    document.body.dataset.ready = ready ? "true" : "false";
+  }, [demoMode, ready]);
+
+  if (!ready) {
+    return null;
+  }
 
   return (
-    <div className="app-shell" style={{ minWidth: 380 }}>
+    <div
+      className="app-shell"
+      style={{ minWidth: 380, maxWidth: 460, margin: "0 auto", width: "100%" }}
+    >
       <section className="hero">
         <div className="hero-copy">
           <div>

@@ -1,0 +1,43 @@
+{
+  "generatedAt": "2026-03-30T04:07:51.296Z",
+  "extensionId": "negiijodiohefghcafombpombdikjocf",
+  "screenshots": [
+    {
+      "file": "screenshots/01-capture-current-chat.png",
+      "title": "Capture current AI chats with one click",
+      "caption": "The popup keeps save actions simple, explicit, and local-first."
+    },
+    {
+      "file": "screenshots/02-project-timeline.png",
+      "title": "Route captures into durable projects",
+      "caption": "Projects, timeline history, and export actions sit above any individual chat app."
+    },
+    {
+      "file": "screenshots/03-search-local-archive.png",
+      "title": "Search local archives by project and platform",
+      "caption": "Find exact decisions, prompts, and outputs without reopening old tabs."
+    },
+    {
+      "file": "screenshots/04-control-site-access.png",
+      "title": "Control exactly where the extension can run",
+      "caption": "Supported sites are granted one by one, with onboarding and privacy disclosure built in."
+    },
+    {
+      "file": "screenshots/05-import-and-cleanup.png",
+      "title": "Import existing exports and wipe local data cleanly",
+      "caption": "Bring in ChatGPT exports, review what is stored, and remove everything when needed."
+    }
+  ],
+  "promo": [
+    {
+      "file": "small-promo-tile.png",
+      "title": "Archive AI work locally",
+      "type": "small_promo"
+    },
+    {
+      "file": "marquee-promo-tile.png",
+      "title": "Own your AI workspace",
+      "type": "marquee"
+    }
+  ]
+}

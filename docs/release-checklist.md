@@ -16,10 +16,11 @@
 
 ## Store readiness
 
-- Prepare Chrome Web Store screenshots and promotional assets
-- Finalize store listing copy and short description
+- Run `npm run assets:store`
+- Review `docs/chrome-web-store-submission.md`
 - Review privacy policy against actual shipped behavior
 - Re-check permissions and disclosures before submission
+- Publish a real privacy policy URL and support URL before store submission
 
 ## Platform
 

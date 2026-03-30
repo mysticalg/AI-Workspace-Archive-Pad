@@ -8,32 +8,52 @@ import {
   updateSettings,
   wipeData,
 } from "lib/appState";
+import {
+  getDemoPermissionStatuses,
+  isDemoMode,
+  seedDemoWorkspace,
+} from "lib/demo";
 import type { SupportedPlatform } from "types/archive";
 import type { Settings } from "types/settings";
 
 export default function App() {
+  const demoMode = isDemoMode();
   const [settings, setSettings] = useState<Settings | null>(null);
   const [projectOptions, setProjectOptions] = useState<Array<{ id: string; title: string }>>([]);
   const [archiveCount, setArchiveCount] = useState(0);
   const [importStatus, setImportStatus] = useState("");
   const [settingsError, setSettingsError] = useState("");
   const [permissionStatuses, setPermissionStatuses] = useState<Record<string, boolean>>({});
+  const [ready, setReady] = useState(false);
 
   const platforms: SupportedPlatform[] = ["chatgpt", "claude", "gemini", "perplexity"];
 
   const refresh = async () => {
+    if (demoMode) {
+      await seedDemoWorkspace();
+    }
+
     const data = await loadAppData();
     setSettings(data.settings);
     setProjectOptions(data.projects.map((project) => ({ id: project.id, title: project.title })));
     setArchiveCount(data.records.length);
-    setPermissionStatuses(await getPlatformPermissionStatuses(platforms));
+    setPermissionStatuses(
+      demoMode
+        ? getDemoPermissionStatuses(platforms)
+        : await getPlatformPermissionStatuses(platforms),
+    );
   };
 
   useEffect(() => {
-    void refresh();
-  }, []);
+    void refresh().finally(() => setReady(true));
+  }, [demoMode]);
 
-  if (!settings) {
+  useEffect(() => {
+    document.body.dataset.demoMode = demoMode ? "true" : "false";
+    document.body.dataset.ready = ready ? "true" : "false";
+  }, [demoMode, ready]);
+
+  if (!ready || !settings) {
     return null;
   }
 

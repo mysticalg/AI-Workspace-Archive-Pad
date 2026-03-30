@@ -29,6 +29,7 @@ AI Workspace Archive is a local-first Chrome extension for saving, organizing, s
 ## Development commands
 
 - `npm run build`
+- `npm run assets:store`
 - `npm run qa:extension`
 - `npm run test -w extension`
 - `npm run typecheck -w extension`
@@ -41,3 +42,4 @@ AI Workspace Archive is a local-first Chrome extension for saving, organizing, s
 - The extension captures visible content only after a user-triggered save action.
 - Supported AI-site access is requested explicitly and can be removed per platform from Settings.
 - Cloud sync and billing are scaffolded but not yet production-integrated.
+- Generated Chrome Web Store assets are written to `assets/chrome-web-store/`.
