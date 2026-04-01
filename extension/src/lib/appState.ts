@@ -1,4 +1,5 @@
 import { db } from "db/dexie";
+import { seedDemoWorkspace } from "lib/demo";
 import { parseImportFile } from "lib/importers";
 import {
   hasPlatformPermission,
@@ -7,7 +8,6 @@ import {
 import { unwrapRuntimeResponse } from "lib/runtime";
 import { searchArchive } from "lib/search";
 import {
-  canCreateMoreProjects,
   ensureSettings,
   getAppState,
   mergeImportBundle,
@@ -56,10 +56,6 @@ export async function loadAppData() {
 }
 
 export async function createProject(title: string, description?: string) {
-  if (!(await canCreateMoreProjects())) {
-    throw new Error("Free tier supports up to 5 projects. Upgrade to Pro for unlimited projects.");
-  }
-
   return upsertProject({
     title,
     description,
@@ -143,6 +139,10 @@ export async function requestPageStatus() {
 
 export async function requestCurrentPlatformPermission() {
   return requestPlatformPermission();
+}
+
+export async function loadReviewWorkspace() {
+  await seedDemoWorkspace();
 }
 
 export async function requestPlatformPermission(platform?: SupportedPlatform) {

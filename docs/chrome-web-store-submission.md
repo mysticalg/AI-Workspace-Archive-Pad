@@ -63,9 +63,6 @@ The paired titles and captions live in `assets/chrome-web-store/asset-manifest.j
 
 ## Permissions justification
 
-`storage`
-: Stores projects, archive records, snippets, and user settings locally in IndexedDB.
-
 `activeTab`
 : Reads the active supported tab after a user-triggered capture action or popup status check.
 
@@ -116,9 +113,10 @@ No reviewer credentials are required for the current local-first release.
 Suggested reviewer instructions:
 
 1. Load the unpacked extension from `extension/dist`.
-2. Open the popup and options page to review onboarding, privacy disclosure, and optional site-access controls.
-3. Grant access to one supported site if you want to test live capture.
-4. Confirm that removal of site access stops automatic overlay injection after a page reload.
+2. Open the popup or side panel and use `Load Sample Archive` if you want to review search, export, and deletion flows without third-party accounts.
+3. Open the options page to review onboarding, privacy disclosure, and optional site-access controls.
+4. Grant access to one supported site if you want to test live capture.
+5. Confirm that removal of site access stops automatic overlay injection after a page reload.
 
 If a later release introduces gated cloud features, add reviewer credentials in the Chrome Web Store `Test instructions` tab instead of hiding them in the public listing.
 

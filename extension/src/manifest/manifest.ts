@@ -13,7 +13,7 @@ export default defineManifest({
   version: "0.1.0",
   description:
     "Save, organize, search, and export your AI workspace across platforms.",
-  permissions: ["storage", "activeTab", "scripting", "sidePanel"],
+  permissions: ["activeTab", "scripting", "sidePanel"],
   optional_host_permissions: [...SUPPORTED_HOSTS],
   background: {
     service_worker: "src/background/service-worker.ts",

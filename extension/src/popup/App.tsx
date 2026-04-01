@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   captureCurrentPage,
+  loadReviewWorkspace,
   loadAppData,
   openSidePanel,
   requestCurrentPlatformPermission,
@@ -20,6 +21,7 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [permissionBusy, setPermissionBusy] = useState(false);
+  const [sampleBusy, setSampleBusy] = useState(false);
   const [ready, setReady] = useState(false);
 
   const refresh = async () => {
@@ -110,6 +112,27 @@ export default function App() {
           <button className="button-secondary" onClick={() => void openSidePanel()}>
             Open Side Panel
           </button>
+          {records.length === 0 ? (
+            <button
+              className="button-secondary"
+              disabled={sampleBusy}
+              onClick={async () => {
+                setSampleBusy(true);
+                setError("");
+                try {
+                  await loadReviewWorkspace();
+                  await refresh();
+                  setError("Sample archive loaded. Open the side panel to review search, export, and delete flows.");
+                } catch (value) {
+                  setError(value instanceof Error ? value.message : "Unable to load the sample archive.");
+                } finally {
+                  setSampleBusy(false);
+                }
+              }}
+            >
+              {sampleBusy ? "Loading sample..." : "Load Sample Archive"}
+            </button>
+          ) : null}
           {!status.permissionGranted && status.supportedUrl ? (
             <button
               className="button-secondary"
@@ -190,15 +213,21 @@ export default function App() {
           </div>
         </div>
         <div className="list">
-          {records.map((record) => (
-            <div key={record.id} className="list-item">
-              <div className="list-item-title">{record.sourceTitle ?? "Untitled capture"}</div>
-              <div className="list-item-meta">
-                <span>{record.platform}</span>
-                <span>{new Date(record.capturedAt).toLocaleString()}</span>
-              </div>
+          {records.length === 0 ? (
+            <div className="surface muted">
+              No local captures yet. Load the sample archive to review export and search flows without a live AI account.
             </div>
-          ))}
+          ) : (
+            records.map((record) => (
+              <div key={record.id} className="list-item">
+                <div className="list-item-title">{record.sourceTitle ?? "Untitled capture"}</div>
+                <div className="list-item-meta">
+                  <span>{record.platform}</span>
+                  <span>{new Date(record.capturedAt).toLocaleString()}</span>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </section>
     </div>

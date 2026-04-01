@@ -4,6 +4,7 @@ import {
   getPlatformPermissionStatuses,
   importArchiveFile,
   loadAppData,
+  loadReviewWorkspace,
   requestPlatformPermission,
   revokePlatformPermission,
   updateSettings,
@@ -68,7 +69,7 @@ export default function App() {
           </div>
           <div className="badge-row">
             <span className="badge">{settings.storageMode}</span>
-            <span className="badge alt">{settings.billing.tier}</span>
+            <span className="badge alt">current release</span>
           </div>
         </div>
         <div className="hero-grid">
@@ -132,30 +133,22 @@ export default function App() {
           <div className="section-header">
             <div>
               <h3>Storage and Defaults</h3>
-              <div className="muted">Control storage mode, default project routing, and export behavior.</div>
+              <div className="muted">Control the local archive, default project routing, and export behavior.</div>
+            </div>
+          </div>
+
+          <div className="mini-grid">
+            <div className="surface">
+              <strong>Shipped in this release</strong>
+              <div className="muted">Local-only archive storage, manual capture, and local export.</div>
+            </div>
+            <div className="surface">
+              <strong>Not enabled in this package</strong>
+              <div className="muted">Cloud sync, billing, and team workspaces are not part of the shipped extension.</div>
             </div>
           </div>
 
           <div className="field-grid">
-            <div className="field">
-              <label htmlFor="storage-mode">Storage Mode</label>
-              <select
-                id="storage-mode"
-                value={settings.storageMode}
-                onChange={async (event) => {
-                  setSettingsError("");
-                  const next = await updateSettings({
-                    ...settings,
-                    storageMode: event.target.value as Settings["storageMode"],
-                  });
-                  setSettings(next);
-                }}
-              >
-                <option value="local-only">Local only</option>
-                <option value="sync-enabled">Sync enabled</option>
-              </select>
-            </div>
-
             <div className="field">
               <label htmlFor="default-project">Default Project</label>
               <select
@@ -175,29 +168,6 @@ export default function App() {
                     {project.title}
                   </option>
                 ))}
-              </select>
-            </div>
-
-            <div className="field">
-              <label htmlFor="billing-tier">Tier Preview</label>
-              <select
-                id="billing-tier"
-                value={settings.billing.tier}
-                onChange={async (event) => {
-                  setSettingsError("");
-                  const next = await updateSettings({
-                    ...settings,
-                    billing: {
-                      ...settings.billing,
-                      tier: event.target.value as Settings["billing"]["tier"],
-                    },
-                  });
-                  setSettings(next);
-                }}
-              >
-                <option value="free">Free</option>
-                <option value="pro">Pro</option>
-                <option value="team">Team</option>
               </select>
             </div>
           </div>
@@ -353,6 +323,21 @@ export default function App() {
             >
               Create Import Project
             </button>
+            <button
+              className="button-soft"
+              onClick={async () => {
+                try {
+                  setSettingsError("");
+                  await loadReviewWorkspace();
+                  await refresh();
+                  setSettingsError("Sample archive loaded. Use the side panel to review search, export, and deletion flows locally.");
+                } catch (value) {
+                  setSettingsError(value instanceof Error ? value.message : "Unable to load the sample archive.");
+                }
+              }}
+            >
+              Load Sample Archive
+            </button>
           </div>
           <div className="muted">
             Enabled platforms show the capture overlay on supported AI sites. Disable any platform you do not want to use.
@@ -437,22 +422,18 @@ export default function App() {
       <section className="section-card">
         <div className="section-header">
           <div>
-            <h3>Plans and Monetization</h3>
-            <div className="muted">Pricing copied from the PRD, with local tier simulation until billing is wired.</div>
+            <h3>Review Workspace</h3>
+            <div className="muted">Use a local sample archive to exercise reviewer-visible flows without third-party accounts.</div>
           </div>
         </div>
-        <div className="pricing-grid">
-          <div className="pricing-card">
-            <h3>Free</h3>
-            <p className="muted">5 projects, local-only storage, manual capture, Markdown/JSON/basic PDF.</p>
+        <div className="mini-grid">
+          <div className="surface">
+            <strong>Load sample archive</strong>
+            <div className="muted">Populate projects and captures locally so search, export, and deletion are immediately testable.</div>
           </div>
-          <div className="pricing-card">
-            <h3>Pro</h3>
-            <p className="muted">GBP 4.99/month or GBP 39/year. Unlimited projects, sync, DOCX, batch export, prompt library.</p>
-          </div>
-          <div className="pricing-card">
-            <h3>Team</h3>
-            <p className="muted">Per-seat pricing with shared spaces, admin controls, and retention features.</p>
+          <div className="surface">
+            <strong>Manual live capture</strong>
+            <div className="muted">Open a supported AI workspace and click save to capture visible content from a real page.</div>
           </div>
         </div>
       </section>

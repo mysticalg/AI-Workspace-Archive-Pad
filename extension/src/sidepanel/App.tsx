@@ -7,6 +7,7 @@ import {
   deleteRecord,
   exportProject,
   exportRecord,
+  loadReviewWorkspace,
   loadAppData,
   requestPageStatus,
   searchRecords,
@@ -50,6 +51,8 @@ export default function App() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [pageStatus, setPageStatus] = useState<PageStatusResponse>({});
   const [selectedProjectId, setSelectedProjectId] = useState<string>();
+  const [activityMessage, setActivityMessage] = useState("");
+  const [sampleBusy, setSampleBusy] = useState(false);
   const [ready, setReady] = useState(false);
 
   const refresh = async () => {
@@ -98,6 +101,8 @@ export default function App() {
     return null;
   }
 
+  const hasProjectRecords = projectRecords.length > 0;
+
   const handleSave = async (
     mode: SaveMode,
     payload: { projectId?: string; tags: string[]; notes?: string },
@@ -110,6 +115,7 @@ export default function App() {
       await captureLastExchange(payload);
     }
     await refresh();
+    setActivityMessage("Capture saved.");
   };
 
   return (
@@ -122,7 +128,7 @@ export default function App() {
           </div>
           <div className="badge-row">
             <span className="badge">{settings?.storageMode ?? "local-only"}</span>
-            <span className="badge alt">{settings?.billing.tier ?? "free"} tier</span>
+            <span className="badge alt">manual capture only</span>
           </div>
         </div>
         <div className="hero-grid">
@@ -153,13 +159,56 @@ export default function App() {
         </section>
       ) : null}
 
+      {records.length === 0 ? (
+        <section className="section-card">
+          <div className="section-header">
+            <div>
+              <h3>Review Sample Workspace</h3>
+              <div className="muted">
+                Load a local sample archive so search, export, and deletion flows are reproducible without signing into a third-party AI account.
+              </div>
+            </div>
+            <span className="badge">Local demo</span>
+          </div>
+          <div className="toolbar">
+            <button
+              className="button-primary"
+              disabled={sampleBusy}
+              onClick={async () => {
+                setSampleBusy(true);
+                setActivityMessage("");
+                try {
+                  await loadReviewWorkspace();
+                  await refresh();
+                  setActivityMessage("Sample archive loaded. Search, export, and delete actions are now available locally.");
+                } catch (value) {
+                  setActivityMessage(value instanceof Error ? value.message : "Unable to load the sample archive.");
+                } finally {
+                  setSampleBusy(false);
+                }
+              }}
+            >
+              {sampleBusy ? "Loading sample..." : "Load Sample Archive"}
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      {activityMessage ? <div className="section-card muted">{activityMessage}</div> : null}
+
       <ProjectSelector
         projects={projects}
         selectedProjectId={selectedProjectId}
         onSelect={setSelectedProjectId}
         onCreate={async (title) => {
-          await createProject(title);
-          await refresh();
+          try {
+            setActivityMessage("");
+            await createProject(title);
+            await refresh();
+            setActivityMessage("Project created.");
+          } catch (value) {
+            setActivityMessage(value instanceof Error ? value.message : "Unable to create the project.");
+          }
         }}
       />
 
@@ -201,8 +250,23 @@ export default function App() {
 
       <RecentCaptures
         records={projectRecords.slice(0, 12)}
-        onExport={(recordId, format) => void exportRecord(recordId, format)}
-        onDelete={(recordId) => void deleteRecord(recordId).then(refresh)}
+        onExport={(recordId, format) =>
+          void exportRecord(recordId, format)
+            .then(() => setActivityMessage(`${format.toUpperCase()} export downloaded.`))
+            .catch((value) =>
+              setActivityMessage(value instanceof Error ? value.message : "Unable to export the record."),
+            )
+        }
+        onDelete={(recordId) =>
+          void deleteRecord(recordId)
+            .then(async () => {
+              await refresh();
+              setActivityMessage("Capture deleted.");
+            })
+            .catch((value) =>
+              setActivityMessage(value instanceof Error ? value.message : "Unable to delete the record."),
+            )
+        }
       />
 
       <section className="section-card">
@@ -216,22 +280,49 @@ export default function App() {
           <div className="toolbar">
             <button
               className="button-secondary"
-              disabled={!selectedProjectId}
-              onClick={() => selectedProjectId && void exportProject(selectedProjectId, "markdown")}
+              disabled={!selectedProjectId || !hasProjectRecords}
+              onClick={() =>
+                selectedProjectId &&
+                void exportProject(selectedProjectId, "markdown")
+                  .then(() => setActivityMessage("Project Markdown export downloaded."))
+                  .catch((value) =>
+                    setActivityMessage(
+                      value instanceof Error ? value.message : "Unable to export the project.",
+                    ),
+                  )
+              }
             >
               Batch Markdown
             </button>
             <button
               className="button-secondary"
-              disabled={!selectedProjectId}
-              onClick={() => selectedProjectId && void exportProject(selectedProjectId, "pdf")}
+              disabled={!selectedProjectId || !hasProjectRecords}
+              onClick={() =>
+                selectedProjectId &&
+                void exportProject(selectedProjectId, "pdf")
+                  .then(() => setActivityMessage("Project PDF export downloaded."))
+                  .catch((value) =>
+                    setActivityMessage(
+                      value instanceof Error ? value.message : "Unable to export the project.",
+                    ),
+                  )
+              }
             >
               Batch PDF
             </button>
             <button
               className="button-soft"
-              disabled={!selectedProjectId}
-              onClick={() => selectedProjectId && void exportProject(selectedProjectId, "zip")}
+              disabled={!selectedProjectId || !hasProjectRecords}
+              onClick={() =>
+                selectedProjectId &&
+                void exportProject(selectedProjectId, "zip")
+                  .then(() => setActivityMessage("Project ZIP export downloaded."))
+                  .catch((value) =>
+                    setActivityMessage(
+                      value instanceof Error ? value.message : "Unable to export the project.",
+                    ),
+                  )
+              }
             >
               Full ZIP Package
             </button>
